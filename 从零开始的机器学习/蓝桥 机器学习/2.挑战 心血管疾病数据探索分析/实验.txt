@@ -1,0 +1,304 @@
+
+
+进一步观察
+
+
+0.问题：数据集中有多少男性和女性？由于 gender 特征没有说明男女，你需要通过分析身高计算得出。
+
+df.groupby(['gender'])['height'].describe()
+
+
+	count 	mean 	std 	min 	25% 	50% 	75% 	max
+gender 								
+1 	45530.0 	161.355612 	7.052726 	55.0 	157.0 	161.0 	166.0 	250.0
+2 	24470.0 	169.947895 	7.228895 	65.0 	165.0 	170.0 	175.0 	207.0
+
+
+所以是 [ A ] 45530 女性 和 24470 男性
+
+
+--------------------------------------------------
+
+1.问题：数据集中男性和女性，哪个群体饮酒的频次更高？
+
+df.groupby(['gender'])['alco'].value_counts()
+df.groupby(['gender'])['alco'].value_counts(normalize = True)
+gender  alco
+1       0       44369
+        1        1161
+2       0       21867
+        1        2603
+Name: alco, dtype: int64
+
+显然是[ B ] 男性
+
+
+--------------------------------------------------
+
+2.问题：数据集中男性和女性吸烟者所占百分比的差值是多少？
+
+df.groupby(['gender'])['smoke'].value_counts(normalize = True)
+
+gender  smoke
+1       0        0.982144
+        1        0.017856
+2       0        0.781120
+        1        0.218880
+Name: smoke, dtype: float64
+
+
+[ C ] 20
+
+---------------------------------------------
+
+3.问题：数据集中吸烟者和非吸烟者的年龄中位数之间的差值（以月计）近似是多少？你需要尝试确定出数据集中 age 合理的表示单位。
+
+
+df.groupby(['smoke'])['age'].agg(np.median)
+
+smoke
+0    19722
+1    19125
+Name: age, dtype: int64
+
+
+(19722 - 19125) / 365.25 *12
+
+19.613963039014372
+
+[ D ] 20
+
+==========================
+
+
+风险量表图
+
+4. 问题：计算 [60,65)
+年龄区间下，较健康人群（胆固醇类别 1，收缩压低于 120）与高风险人群（胆固醇类别为 3，收缩压 [160,180)）各自心血管病患所占比例。并最终求得二者比例的近似倍数。
+
+#添加age_years列
+age_years = df['age'] / 365.25
+df.insert(loc = len(df.columns) ,column = 'age_years', value = age_years)
+
+
+#男性，[60,65)，抽烟
+smoking_old_men = df[(df['gender'] == 2) & (df['age_years'] >= 60)
+                     & (df['age_years'] < 65) & (df['smoke'] == 1)]
+
+#他们中胆固醇类别1，收缩压低于120的人中，患心血管疾病的人的比例
+smoking_old_men[(smoking_old_men['cholesterol'] == 1) &
+                (smoking_old_men['ap_hi'] < 120)]['cardio'].mean()
+#'cardio'是0-1值，所以这里直接用了mean求比例，很机智
+0.2777777777777778
+
+
+#他们中胆固醇类别3，收缩压 [160,180)的人中，患心血管疾病的人的比例
+smoking_old_men[(smoking_old_men['cholesterol'] == 3) &
+                (smoking_old_men['ap_hi'] >= 160) &
+                (smoking_old_men['ap_hi'] < 180)]['cardio'].mean()
+
+0.9285714285714286
+
+
+所以大约是3倍
+
+
+----
+
+答案：
+
+#使用了round() 和 astype()方法 ，把数据处理成了整数
+df['age_years'] = (df['age'] / 365.25).round().astype('int')
+
+
+=======================================
+
+BMI 指数分析
+
+
+5. 问题：请选择下面叙述正确的有：
+
+    [ A ] 数据集样本中 BMI 中位数在正常范围内。
+    [ B ] 女性的平均 BMI 指数高于男性。
+    [ C ] 健康人群的 BMI 平均高于患病人群。
+    [ D ] 健康和不饮酒男性中，BMI 比健康不饮酒女性更接近正常值。
+
+
+#插入BMI
+bmi = df['weight'] / ((df['height'] / 100)**2)
+df.insert(loc = len(df.columns) ,column = 'BMI', value = bmi)
+
+
+df['BMI'].median()
+26.374068120774975，A错误
+
+df.groupby('gender')['BMI'].mean()
+gender
+1    27.987583
+2    26.754442
+Name: BMI, dtype: float64
+所以B是对的
+
+df.groupby('cardio')['BMI'].mean()
+cardio
+0    26.548175
+1    28.566061
+Name: BMI, dtype: float64
+
+显然患病的更高，C错误
+
+
+df[(df['cardio']==0) & (df['alco'] == 0)].groupby('gender')['BMI'].mean()
+
+gender
+1    26.845407
+2    25.872638
+Name: BMI, dtype: float64
+
+这样D也是正确的
+
+
+答案：
+
+#这样更容易看
+df.groupby(['gender', 'alco', 'cardio'])['BMI'].median().to_frame()
+
+
+			BMI
+gender 	alco 	cardio 	
+1 	0 	0 	25.654372
+1 	27.885187
+1 	0 	27.885187
+1 	30.110991
+2 	0 	0 	25.102391
+1 	26.674874
+1 	0 	25.351541
+1 	27.530797
+
+
+
+
+
+
+=================================
+
+数据清洗
+
+6.问题：请按照以下列举的项目，过滤掉数据中统计有误的部分：
+
+    血压特征中，舒张压高于收缩压的样本。
+    身高特征中，低于 2.5％ 分位数的样本。
+    身高特征中，高于 97.5％ 分位数的样本。
+    体重特征中，低于 2.5％ 分位数的样本。
+    体重特征中，高于 97.5％ 分位数的样本。
+
+
+
+filtered_df = df[(df['ap_lo'] <= df['ap_hi']) &
+                 (df['height'] >= df['height'].quantile(0.025)) &
+                 (df['height'] <= df['height'].quantile(0.975)) &
+                 (df['weight'] >= df['weight'].quantile(0.025)) &
+                 (df['weight'] <= df['weight'].quantile(0.975))]
+
+
+
+
+7.问题：清洗掉的数据占原数据总量的近似百分比？
+
+1 - filtered_df.shape[0] / df.shape[0]
+0.09630000000000005
+
+
+=====================================
+
+数据可视化分析
+
+8.问题：使用 heatmap() 绘制特征之间的皮尔逊相关性系数矩阵。
+
+
+# 计算相关性系数矩阵
+df = filtered_df.copy()
+
+corr = df.corr(method='pearson')
+
+# 创建一个 Mask 来隐藏相关矩阵的上三角形
+mask = np.zeros_like(corr, dtype=np.bool)
+mask[np.triu_indices_from(mask)] = True
+
+# 绘制图像
+f, ax = plt.subplots(figsize=(12, 9))
+sns.heatmap(corr, mask=mask, vmax=1, center=0, annot=True, fmt='.1f',
+            square=True, linewidths=.5, cbar_kws={"shrink": .5})
+
+
+9.问题：以下哪组特征与性别的相关性更强？
+
+[ B ] Height, Smoke
+
+
+
+==========================
+
+男女身高分布
+
+
+10.问题：绘制身高和性别之间的小提琴图 violinplot()
+
+
+df_melt = pd.melt(frame=df, value_vars=['height'], id_vars=['gender'])
+
+plt.figure(figsize=(12, 10))
+ax = sns.violinplot(
+    x='variable',
+    y='value',
+    hue='gender',
+    palette="muted",
+    split=True,
+    data=df_melt,
+    scale='count',
+    scale_hue=False
+)
+
+
+11.问题：绘制身高和性别之间的核密度图 kdeplot。
+
+sns.FacetGrid(df, hue="gender", height=12).map(sns.kdeplot, "height").add_legend()
+
+
+12.问题：使用 heatmap() 绘制特征之间的斯皮尔曼等级相关系数矩阵。
+
+# 计算斯皮尔曼等级相关系数
+corr = df[['id', 'age', 'height', 'weight',
+           'ap_hi', 'ap_lo', 'cholesterol',
+           'gluc']].corr(method='spearman')
+
+# 创建一个 Mask 来隐藏相关矩阵的上三角形
+mask = np.zeros_like(corr, dtype=np.bool)
+mask[np.triu_indices_from(mask)] = True
+
+f, ax = plt.subplots(figsize=(12, 10))
+
+# 绘制图像
+sns.heatmap(corr, mask=mask, vmax=1, center=0, annot=True, fmt='.2f',
+            square=True, linewidths=.5, cbar_kws={"shrink": .5})
+
+13.问题：下列那一组特征具有最强的 Spearman 相关性？
+
+[ E ] Ap_hi, Ap_lo
+
+
+===================================
+
+年龄可视化
+
+14.问题：请使用 countplot() 绘制年龄分布计数图，横坐标为年龄，纵坐标为对应的人群数量。
+
+sns.countplot(x="age_years", hue='cardio', data=df)
+
+15.问题：在哪个年龄下，心血管疾病患者人数首次超过无心血管疾病患者人数？
+[ B ] 55
+
+
+
+
+

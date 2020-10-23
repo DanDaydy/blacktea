@@ -1,0 +1,54 @@
+什么是0-1背包问题？ 
+
+0-1 背包问题：给定 n 种物品和一个容量为 C 的背包，物品 i 的重量是 w_i，其价值为 v_i 。问：应该如何选择装入背包的物品，使得装入背包中的物品的总价值最大？
+
+------------------------
+解决方案设计
+假设我们面前有n种物品，那么我们可以将解决方案设置成一个一维数组selection[n]。数组weights[n]表示重量，数组values[n]表示价值。
+
+    selection[i] = 1 表示装入第i个物品。
+    selection[i] = 0 表示不装入第i个物品。
+    总价值total_value  = \sum_i  selection[i] * values[i]。 (i=1,2,3,4……n)
+    总重量total_weight =\sum_i  selection[i] * weights[i]。(i=1,2,3,4……n)
+
+邻域动作1
+将解决方案selection[n]的第i位取反(i=1,2,3,4……n)
+#选一位，1变0,0变1
+
+邻域动作2
+对于解决方案selection[n]，在第i  (i=1,2,3,4……n)位取反的情况下，依次将第j  (j=i+1,2,3,4……n)位也取反。
+#邻域动作1的基础，选择点之后的每一位也取反
+
+邻域动作3
+交换第i位和第i-3位的数
+#交换两位的数
+
+
+
+=======================================
+
+n = 100  物品数量
+Max_Iteration = 1000  最大迭代次数
+Max_Flip = 3   邻域数量
+背包最大容量  maxweight = 5 * n
+
+class   Solution(object):
+	def __init__(self):
+		self.selection = []
+		self.values = 0
+		self.weights = 0
+
+	def copy(self):
+		soultion = Solution()
+		solution.selection = copy.deepcopy(self.selection)
+		solution.values = self.values
+		solution.weights = self.weights
+		return solution
+
+
+1.计算总价值total_values():  #传入一个selection矩阵
+2.计算总重量total_weights():
+3.利用邻域动作生成邻居解neighborhood:
+	3.1 邻域动作0
+	3.2 邻域动作1
+	3.3 邻域动作2

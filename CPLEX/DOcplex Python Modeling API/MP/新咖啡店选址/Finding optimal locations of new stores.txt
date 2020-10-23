@@ -1,0 +1,328 @@
+https://github.com/IBMDecisionOptimization/docplex-examples/blob/master/examples/mp/jupyter/chicago_coffee_shops.ipynb
+
+
+介绍了一个选址问题，从81个图书馆的位置选5个当做咖啡店的位置
+目标是使总的图书馆到咖啡店的位置最短（一家图书馆计算到一个咖啡店的距离）
+
+建模方面，使用了两种0-1变量
+
+第一个，dict形式的，提供一个关键字即可
+表示该咖啡店预选位置是否被选中
+coffeeshop_vars = mdl.binary_var_dict(coffeeshop_locations, name="is_coffeeshop")
+#
+第二个是matrix形式的，提供两个关键字
+表示该咖啡店和图书馆的link是否被选中
+link_vars = mdl.binary_var_matrix(coffeeshop_locations, libraries, "link")
+
+
+约束条件方面
+
+跟咖啡店位置距离太远的图书馆，这个link为0
+#删去一些太离谱的link
+
+咖啡店如果没开门，所有跟它相关的link全为0
+如果开门了，那么就有可能存在跟它的link
+
+每个图书馆必须且只能link一家咖啡店
+
+咖啡店数目约束
+
+==================================================
+
+
+
+Finding optimal locations of new stores
+
+
+
+Describe the business problem
+
+一家虚构的Coffee Company计划在不久的将来开设N家商店，并且需要了解以下几点，以确定他们应位于的位置：
+         这个咖啡酿造厂的大多数客户喜欢阅读和借书，因此目标是要以使所有城市公共图书馆都在最小步行距离之内的方式来定位这些商店。
+     在此示例中，我们使用芝加哥公开数据。
+     我们采用K均值模型来获取未来商店的最佳位置。
+
+
+How decision optimization can help
+
+规范分析（决策优化）技术可根据预期结果建议操作。它考虑了特定的方案，资源以及过去和当前事件的知识。有了这种洞察力，您的组织可以做出更好的决策并更好地控制业务成果。
+
+    规范分析是迈向基于洞察力的行动之路的下一步。它通过与预测分析的协同作用来创造价值，预测分析可以分析数据以预测未来的结果。
+
+    规范分析通过建议处理未来情况的最佳方法，将这一见解提升到了新的水平。能够在动态条件下快速行动并在不确定的环境中做出卓越决策的组织可以获得强大的竞争优势。
+
+    自动执行复杂的决策和权衡，以更好地管理您有限的资源。
+    利用未来的机会或减轻未来的风险。
+    根据事件的变化主动更新建议。
+    达到运营目标，提高客户忠诚度，防止威胁和欺诈并优化业务流程。
+
+
+
+
+Use decision optimization
+
+
+----->Step 1: Import the library
+运行以下代码以导入Decision Optimization CPLEX建模库。 DOcplex库包含前面提到的两个建模程序包，数学编程和约束编程。
+import sys
+try:
+    import docplex.mp
+except:
+    raise Exception('Please install docplex. See https://pypi.org/project/docplex/')
+
+
+
+----->Step 2: Model the data
+有关此问题的数据非常简单：它由公共图书馆列表及其地理位置组成。
+The data is acquired from Chicago open data as a JSON file, which is in the following format:
+data" : [ [ 1, "13BFA4C7-78CE-4D83-B53D-B57C60B701CF", 1, 1441918880, "885709", 1441918880, "885709", null, "Albany Park", "M, W: 10AM-6PM;  TU, TH: 12PM-8PM; F, SA: 9AM-5PM; SU: Closed", "Yes", "Yes ", "3401 W. Foster Avenue", "CHICAGO", "IL", "60625", "(773) 539-5450", [ "http://www.chipublib.org/locations/1/", null ], [ null, "41.975456", "-87.71409", null, false ] ]
+This code snippet represents library "3401 W. Foster Avenue" located at 41.975456, -87.71409
+
+
+----->Step 3: Prepare the data
+我们需要收集公共图书馆位置的列表，并保留其名称，纬度和经度。
+
+# Store longitude, latitude and street crossing name of each public library location.
+class XPoint(object):
+    def __init__(self, x, y):
+        self.x = x
+        self.y = y
+    def __str__(self):
+        return "P(%g_%g)" % (self.x, self.y)
+
+class NamedPoint(XPoint):
+    def __init__(self, name, x, y):
+        XPoint.__init__(self, x, y)
+        self.name = name
+    def __str__(self):
+        return self.name
+
+
+定义如何计算2点之间的地球距离
+
+为了轻松计算2点之间的距离，我们使用Python软件包geopy
+
+try:
+    import geopy.distance
+except:
+    if hasattr(sys, 'real_prefix'):
+        #we are in a virtual env.
+        !pip install geopy 
+    else:
+        !pip install --user geopy
+
+
+# Simple distance computation between 2 locations.
+from geopy.distance import great_circle
+ 
+def get_distance(p1, p2):
+    return great_circle((p1.y, p1.x), (p2.y, p2.x)).miles
+
+
+Declare the list of libraries
+
+def build_libraries_from_url(url):
+    import requests
+    import json
+    from six import iteritems
+
+    r = requests.get(url)
+    myjson = json.loads(r.text, parse_constant='utf-8')
+    
+    # find columns for name and location
+    columns = myjson['meta']['view']['columns']
+    name_col = -1
+    location_col = -1
+    for (i, col) in enumerate(columns):
+        if col['name'].strip().lower() == 'name':
+            name_col = i
+        if col['name'].strip().lower() == 'location':
+            location_col = i
+    if (name_col == -1 or location_col == -1):
+        raise RuntimeError("Could not find name and location columns in data. Maybe format of %s changed?" % url)
+    
+    # get library list
+    data = myjson['data']
+
+    libraries = []
+    k = 1
+    for location in data:
+        uname = location[name_col]
+        try:
+            latitude = float(location[location_col][1])
+            longitude = float(location[location_col][2])
+        except TypeError:
+            latitude = longitude = None
+        try:
+            name = str(uname)
+        except:
+            name = "???"
+        name = "P_%s_%d" % (name, k)
+        if latitude and longitude:
+            cp = NamedPoint(name, longitude, latitude)
+            libraries.append(cp)
+            k += 1
+    return libraries
+
+libraries = build_libraries_from_url('https://data.cityofchicago.org/api/views/x8fc-8rcq/rows.json?accessType=DOWNLOAD')
+
+
+print("There are %d public libraries in Chicago" % (len(libraries)))
+
+
+Define number of shops to open
+
+nb_shops = 5
+print("We would like to open %d coffee shops" % nb_shops)
+
+
+Validate the data by displaying them
+
+try:
+    import folium
+except:
+    if hasattr(sys, 'real_prefix'):
+        #we are in a virtual env.
+        !pip install folium 
+    else:
+        !pip install --user folium
+
+import folium
+map_osm = folium.Map(location=[41.878, -87.629], zoom_start=11)
+for library in libraries:
+    lt = library.y
+    lg = library.x
+    folium.Marker([lt, lg]).add_to(map_osm)
+map_osm
+
+
+
+
+----->Step 4: Set up the prescriptive model
+
+from docplex.mp.environment import Environment
+env = Environment()
+env.print_information()
+
+
+
+Create the DOcplex model
+该模型包含所有业务约束并定义了目标。
+
+from docplex.mp.model import Model
+
+mdl = Model("coffee shops")
+
+
+
+Define the decision variables
+
+BIGNUM = 999999999
+
+# Ensure unique points
+libraries = set(libraries)
+# For simplicity, let's consider that coffee shops candidate locations are the same as libraries locations.
+# That is: any library location can also be selected as a coffee shop.
+coffeeshop_locations = libraries
+
+# Decision vars
+# Binary vars     表示实际选择哪些咖啡店位置
+coffeeshop_vars = mdl.binary_var_dict(coffeeshop_locations, name="is_coffeeshop")
+#
+# Binary vars 代表每个咖啡店的“分配”库
+link_vars = mdl.binary_var_matrix(coffeeshop_locations, libraries, "link")
+
+
+Express the business constraints
+第一个约束：如果距离可疑，则需要将其排除在问题之外。
+
+:
+
+for c_loc in coffeeshop_locations:
+    for b in libraries:
+        if get_distance(c_loc, b) >= BIGNUM:
+            mdl.add_constraint(link_vars[c_loc, b] == 0, "ct_forbid_{0!s}_{1!s}".format(c_loc, b))
+
+
+第二个约束：每个图书馆都必须链接到一家开放的咖啡店。
+
+mdl.add_constraints(link_vars[c_loc, b] <= coffeeshop_vars[c_loc]
+                   for b in libraries
+                   for c_loc in coffeeshop_locations)
+mdl.print_information()
+
+
+第三个约束：每个图书馆都只与一个咖啡馆相连。
+
+mdl.add_constraints(mdl.sum(link_vars[c_loc, b] for c_loc in coffeeshop_locations) == 1
+                   for b in libraries)
+mdl.print_information()
+
+
+第四条约束：有固定数量的咖啡店开业。
+# Total nb of open coffee shops
+mdl.add_constraint(mdl.sum(coffeeshop_vars[c_loc] for c_loc in coffeeshop_locations) == nb_shops)
+
+# Print model information
+mdl.print_information()
+
+
+
+Express the objective 
+目的是最大程度地减少从图书馆到咖啡店的总距离，以使读书者始终可以轻松地到达我们的咖啡店。
+
+
+# Minimize total distance from points to hubs
+total_distance = mdl.sum(link_vars[c_loc, b] * get_distance(c_loc, b) for c_loc in coffeeshop_locations for b in libraries)
+mdl.minimize(total_distance)
+
+
+
+
+Solve with Decision Optimization
+print("# coffee shops locations = %d" % len(coffeeshop_locations))
+print("# coffee shops           = %d" % nb_shops)
+
+assert mdl.solve(), "!!! Solve of the model fails"
+
+
+----->Step 5: Investigate the solution and then run an example analysis
+可以通过在地图上显示咖啡店的位置来分析解决方案。
+otal_distance = mdl.objective_value
+open_coffeeshops = [c_loc for c_loc in coffeeshop_locations if coffeeshop_vars[c_loc].solution_value == 1]
+not_coffeeshops = [c_loc for c_loc in coffeeshop_locations if c_loc not in open_coffeeshops]
+edges = [(c_loc, b) for b in libraries for c_loc in coffeeshop_locations if int(link_vars[c_loc, b]) == 1]
+
+print("Total distance = %g" % total_distance)
+print("# coffee shops  = {0}".format(len(open_coffeeshops)))
+for c in open_coffeeshops:
+    print("new coffee shop: {0!s}".format(c))
+
+
+Displaying the solution
+import folium
+map_osm = folium.Map(location=[41.878, -87.629], zoom_start=11)
+for coffeeshop in open_coffeeshops:
+    lt = coffeeshop.y
+    lg = coffeeshop.x
+    folium.Marker([lt, lg], icon=folium.Icon(color='red',icon='info-sign')).add_to(map_osm)
+    
+for b in libraries:
+    if b not in open_coffeeshops:
+        lt = b.y
+        lg = b.x
+        folium.Marker([lt, lg]).add_to(map_osm)
+    
+
+for (c, b) in edges:
+    coordinates = [[c.y, c.x], [b.y, b.x]]
+    map_osm.add_child(folium.PolyLine(coordinates, color='#FF0000', weight=5))
+
+map_osm
+
+
+
+
+
+
+

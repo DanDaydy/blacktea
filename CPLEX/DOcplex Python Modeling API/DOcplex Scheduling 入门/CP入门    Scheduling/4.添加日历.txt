@@ -1,0 +1,292 @@
+
+1.建5所房子，每个有10个任务
+2.优先级约束
+3.每种任务由特定工人来执行
+4.没有了转移时间，但是工人有假期，节假日不上班
+
+
+这里主要解决的就是节假日不上班的问题
+
+按照流程，决策变量：
+每个任务的区间变量，有固定的size，这次要加上工人的休息日
+	引入step functions来解决这个问题
+	这个函数让进行着的任务自动在休息日延长
+
+
+约束条件：
+优先级约束
+不重叠约束，由于没有转移时间了，所以这里用了一种简写的形式，没有显式定义时间序列
+任务不能在节假日开始和结束，使用forbid_start and forbid_end来约束
+
+目标函数
+最小化总体完工时间
+
+
+#size和length
+默认情况下，通常情况下，这两个是相等的，之前也想不明白有什么区别
+在这个问题中就想通了，size指的是工作的时间，不包括节假日，所以区间变量的size还是一开始定义的Duration
+length指的是任务从开始到结束的时间
+有节假日的存在，二者就不一样了
+
+实际上就是
+#TaskNames_ids = {}
+itvs = {}
+for h in Houses:
+    for i,t in enumerate(TaskNames):
+        _name = str(h) + "_" + str(t)
+        itvs[(h,t)] = mdl3.interval_var(size=Duration[i], intensity=Calendar[Worker[t]], name=_name)
+定义区间变量的时候加了intensity
+
+
+================================================
+Chapter 4. Adding calendars to the house building problem
+
+本章将日历介绍到房屋建造问题中，该问题是安排房屋建造中涉及的任务的调度方式，以最大程度地减少房屋的总体建成日期。
+
+有两个工人，每个工人必须执行必要任务的给定子集。 每个工人都有一个日历，其中详细说明了他不工作的日子，例如周末和节假日。 在工人休假期间，他不执行任务，并且这些任务可能没有计划在这几天开始或结束。 工人休假期间正在执行的任务被暂停。
+
+
+Following concepts are demonstrated:
+
+    use of the step functions,
+    use an alternative version of the constraint no_overlap,
+    use intensity expression,
+    use the constraints forbid_start and forbid_end,
+    use the length and size of an interval variable.
+
+
+Problem to be solved
+
+问题在于，以计划满足时间约束并使标准最小化的方式，将开始日期分配给一组任务。 此问题的标准是最大程度地减少总体完成日期。 对于房屋建筑项目中的每种任务类型，下表显示了任务的大小（以天为单位）以及必须开始完成的任务。 此外，每种类型的任务都可以由两个工人中的给定工人Jim和Joe来执行。 工人一次只能完成一项任务。 一旦开始，“待解决的问题”任务可能会在员工休假期间暂停，但不会被其他任务打断。
+
+Task 	Duration 	Worker 	Preceding tasks
+masonry 	35 	Joe 	
+carpentry 15 	Joe 	masonry
+plumbing 40 	Jim 	masonry
+ceiling 	15 	Jim 	masonry
+roofing 	5 	Joe 	carpentry
+painting 	10 	Jim 	ceiling
+windows 	5 	Jim 	roofing
+facade 	10 	Joe 	roofing, plumbing
+garden 	5 	Joe 	roofing, plumbing
+moving 	5 	Jim 	windows, facade, garden, painting
+
+解决问题包括确定任务的开始日期，以使总的完成日期最小化。
+
+
+
+----->Step 1: Describe the problem
+
+1.What is the known information in this problem ?
+
+两名工人要建造五栋房屋。 对于每个房屋，有十个房屋建造任务，每个任务都有给定的size。 
+对于每个任务，都有一个必须启动的任务列表。 
+每个任务必须由给定的工人执行，并且每个工人都有一个日历，其中列出了他的假期。
+
+2.What are the decision variables or unknowns in this problem ?
+未知数是任务的开始和结束时间，它们也决定了总体完成时间。 
+任务的实际长度取决于其在时间上的位置以及相关工作人员的日历。
+
+3.What are the constraints on these variables ?
+有一些约束条件指定特定任务可能要等到一个或多个给定任务完成后才能开始。
+此外，还有一些约束条件指定一次只能将一个工作人员分配给一个任务。
+在相关工作人员休息日期间，任务无法开始或结束。
+
+4.What is the objective ?
+The objective is to minimize the overall completion date.
+
+
+----->Step 2: Prepare data
+import sys
+from docplex.cp.model import *
+
+mdl3 = CpoModel()
+
+NbHouses = 5;
+
+WorkerNames = ["Joe", "Jim" ]
+
+TaskNames = ["masonry","carpentry","plumbing","ceiling","roofing","painting","windows","facade","garden","moving"]
+
+Duration =  [35,15,40,15,5,10,5,10,5,5]
+
+Worker = {"masonry":"Joe","carpentry":"Joe","plumbing":"Jim","ceiling":"Jim",
+          "roofing":"Joe","painting":"Jim","windows":"Jim","facade":"Joe",
+          "garden":"Joe","moving":"Jim"}
+
+
+Precedences = { ("masonry","carpentry"),("masonry","plumbing"),
+               ("masonry","ceiling"),("carpentry","roofing"),
+               ("ceiling","painting"),("roofing","windows"),
+               ("roofing","facade"),("plumbing","facade"),
+               ("roofing","garden"),("plumbing","garden"),
+               ("windows","moving"),("facade","moving"),  
+               ("garden","moving"),("painting","moving") }
+
+
+----->Step 3: Add the intensity step functions
+
+为了对工人的休假时间进行建模，创建了一个step function来表示其随时间的强度。 此函数的范围为[0..100]，其中值0表示该工作人员不可用，而值100表示该工作人员的日历可用。
+
+步骤函数由方法step_function（）创建。 函数具有相同值的每个间隔[x1，x2）称为步。 当函数的两个连续步骤具有相同的值时，这些步骤将合并，以便始终以最少的步骤数表示函数。
+
+对于每个工人，将创建一个排序的元组集。 在工作人员的可用性发生变化的每个时间点，都会创建一个元组。 元组有两个元素； 第一个元素是一个整数值，代表该工人的空闲时间（0代表休息，100代表完全可以工作，50代表半天），另一个元素代表该可用性更改为该值的日期。 然后，该元组按日期排序，用于创建一个阶跃函数来表示工人随时间的强度。 最后一步之后的函数值设置为100。
+
+Breaks ={
+  "Joe" : [
+     (5,14),(19,21),(26,28),(33,35),(40,42),(47,49),(54,56),(61,63),
+     (68,70),(75,77),(82,84),(89,91),(96,98),(103,105),(110,112),(117,119),
+     (124,133),(138,140),(145,147),(152,154),(159,161),(166,168),(173,175),
+     (180,182),(187,189),(194,196),(201,203),(208,210),(215,238),(243,245),(250,252),
+     (257,259),(264,266),(271,273),(278,280),(285,287),(292,294),(299,301),
+     (306,308),(313,315),(320,322),(327,329),(334,336),(341,343),(348,350),
+     (355,357),(362,364),(369,378),(383,385),(390,392),(397,399),(404,406),(411,413),
+     (418,420),(425,427),(432,434),(439,441),(446,448),(453,455),(460,462),(467,469),
+     (474,476),(481,483),(488,490),(495,504),(509,511),(516,518),(523,525),(530,532),
+     (537,539),(544,546),(551,553),(558,560),(565,567),(572,574),(579,602),(607,609),
+     (614,616),(621,623),(628,630),(635,637),(642,644),(649,651),(656,658),(663,665),
+     (670,672),(677,679),(684,686),(691,693),(698,700),(705,707),(712,714),
+     (719,721),(726,728)
+  ],
+  "Jim" : [
+     (5,7),(12,14),(19,21),(26,42),(47,49),(54,56),(61,63),(68,70),(75,77),
+     (82,84),(89,91),(96,98),(103,105),(110,112),(117,119),(124,126),(131,133),
+     (138,140),(145,147),(152,154),(159,161),(166,168),(173,175),(180,182),(187,189),
+     (194,196),(201,225),(229,231),(236,238),(243,245),(250,252),(257,259),
+     (264,266),(271,273),(278,280),(285,287),(292,294),(299,301),(306,315),
+     (320,322),(327,329),(334,336),(341,343),(348,350),(355,357),(362,364),(369,371),
+     (376,378),(383,385),(390,392),(397,413),(418,420),(425,427),(432,434),(439,441),
+     (446,448),(453,455),(460,462),(467,469),(474,476),(481,483),(488,490),(495,497),
+     (502,504),(509,511),(516,518),(523,525),(530,532),(537,539),(544,546),
+     (551,553),(558,560),(565,581),(586,588),(593,595),(600,602),(607,609),
+     (614,616),(621,623),(628,630),(635,637),(642,644),(649,651),(656,658),
+     (663,665),(670,672),(677,679),(684,686),(691,693),(698,700),(705,707),
+     (712,714),(719,721),(726,728)]
+  }
+
+
+from collections import namedtuple
+#定义了一个namedtuple
+Break = namedtuple('Break', ['start', 'end'])
+#对于namedtuple，你不必再通过索引值进行访问，你可以把它看做一个字典通过名字进行访问，只不过其中的值是不能改变的。
+
+
+#定义日历  （字典类型）
+Calendar = {}
+#找最大的日期
+mymax = max(max(v for k,v in Breaks[w]) for w in WorkerNames)
+for w in WorkerNames:
+    step = CpoStepFunction()
+    #从0到最大的日期，先都设置为100
+    step.set_value(0, mymax, 100)
+    for b in Breaks[w]:
+        #每个b都是一个元组，下面的*b就是把b当可变参数传进去
+        t = Break(*b)
+        #把Breaks里定义的休息区间都给设置成了0
+        step.set_value(t.start, t.end, 0)
+    Calendar[w] = step
+
+
+This intensity function is used in creating the task variables for the workers. 
+此intensity function用于为工人创建任务变量。
+
+The intensity step function of the appropriate worker is passed to the creation of each interval variable. 
+
+The size of the interval variable is the time spent at the house to process the task, not including the worker’s day off. 
+
+The length is the difference between the start and the end of the interval.
+
+
+----->Step 4: Create the interval variables
+
+#TaskNames_ids = {}
+itvs = {}
+for h in Houses:
+    for i,t in enumerate(TaskNames):
+        _name = str(h) + "_" + str(t)
+        itvs[(h,t)] = mdl3.interval_var(size=Duration[i], intensity=Calendar[Worker[t]], name=_name)
+
+#每所房屋每个任务的区间变量，这里添加了intensity
+
+
+----->Step 5: Add the precedence constraints
+#优先级约束
+for h in Houses:
+    for p in Precedences:
+        mdl3.add( mdl3.end_before_start(itvs[h,p[0]], itvs[h,p[1]]) )
+
+----->Step 6: Add the no overlap constraints
+#不重叠约束
+为了增加工作人员一次只能执行一项任务的约束，将与该工作人员关联的间隔变量限制为在解决方案中不重叠。 为此，使用了专用约束no_overlap（），但格式与第3章“为房屋建筑问题添加工人和过渡时间”部分中使用的格式略有不同。
+
+这种形式是一种快捷方式，无需在序列变量上不需要其他约束时，就无需显式定义间隔序列变量。 为每个工作程序将一个no_overlap（）约束添加到间隔变量数组上。
+
+#回想一下第三章里的如何定义不重叠约束的
+先定义每个工人的时间序列，再定义转移时间，然后把二者放到不重叠约束里去
+for w in WorkerNames:
+    mdl2.add( mdl2.no_overlap(workers[w], transitionTimes) )
+
+在这一章的问题里并不考虑转移时间，所以用了一种简写的形式
+
+for w in WorkerNames:
+    mdl3.add( mdl3.no_overlap( [itvs[h,t] for h in Houses for t in TaskNames if Worker[t]==w]  ) )
+
+
+----->Step 7: Create the forbidden start and end constraints
+
+在间隔变量上设置intensity functions后，周末和/或假期重叠的任务将自动延长。 任务仍可以安排在周末开始或结束，但是，由于这个问题，工人的任务无法在工作日休息期间开始或结束。 CP Optimizer提供了约束条件forbid_start和forbid_end以对这些类型的约束条件进行建
+
+
+使用约束forbid_start，将创建约束以指定不得调度interval variable在某些时间启动。 该约束将interval variable和step function作为参数。 如果解决方案中存在interval variable，则将其限制为在step function的值为零时不启动。
+
+CP Optimizer还提供forbid_end和forbid_extent，在相关联的阶跃函数的值为零时，它们分别将interval variable约束为不结束   和    不重叠。（not end and not overlap）
+
+约束forbid_start的第一个参数interval variable。 第二个参数是step function，它为interval variable的 start 定义了一组禁止值：interval variable不能在step function为0的点处开始。
+
+for h in Houses:
+    for t in TaskNames:
+        mdl3.add(mdl3.forbid_start(itvs[h,t], Calendar[Worker[t]]))
+        mdl3.add(mdl3.forbid_end (itvs[h,t], Calendar[Worker[t]]))
+#区间变量不能在intensity step functions为0的时候开始和结束
+
+----->Step 8: Create the objective
+这个问题的目的是使整体竣工日期（最后完工的房屋的完工日期）最小化。 每个房屋项目中的最大竣工日期是根据建筑每个房屋的最后一个任务（此处为移动任务）上的表达式end_of（）确定的，并最小化这些表达式的最大值。
+
+#最小化（所有房屋的完工日期  中的最大值）
+mdl3.add( mdl3.minimize(mdl3.max(mdl3.end_of(itvs[h,"moving"]) for h in Houses)))
+
+----->Step 9: Solve the model
+
+
+# Solve the model
+print("\nSolving model....")
+msol3 = mdl3.solve(FailLimit=30000)
+print("done")
+
+
+
+if msol3:
+    print("Cost will be " + str( msol3.get_objective_values()[0] ))    # Allocate tasks to workers
+    tasks = {w : [] for w in WorkerNames}
+    for k,v in Worker.items():
+        tasks[v].append(k)
+
+    types = {t : i for i,t in enumerate(TaskNames)}
+
+    import docplex.cp.utils_visu as visu
+    import matplotlib.pyplot as plt
+    %matplotlib inline
+    #Change the plot size
+    from pylab import rcParams
+    rcParams['figure.figsize'] = 15, 3
+
+    visu.timeline('Solution SchedCalendar')
+    for w in WorkerNames:
+        visu.panel()
+        visu.pause(Calendar[w])
+        visu.sequence(name=w,
+                      intervals=[(msol3.get_var_solution(itvs[h,t]), types[t], t) for t in tasks[w] for h in Houses])
+    visu.show()
+else:
+    print("No solution found")
+

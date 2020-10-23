@@ -1,0 +1,89 @@
+模块
+
+使用模块
+安装第三方模块
+
+====================================================
+
+使用模块
+
+我们以内建的sys模块为例，编写一个hello的模块：
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+' a test module '
+
+__author__ = 'Michael Liao'
+
+import sys
+
+def test():
+    args = sys.argv
+    if len(args)==1:
+        print('Hello, world!')
+    elif len(args)==2:
+        print('Hello, %s!' % args[1])
+    else:
+        print('Too many arguments!')
+
+if __name__=='__main__':
+    test()
+
+导入sys模块后，我们就有了变量sys指向该模块，利用sys这个变量，就可以访问sys模块的所有功能。
+sys模块有一个argv变量，用list存储了命令行的所有参数。argv至少有一个元素，因为第一个参数永远是该.py文件的名称，例如：
+运行python3 hello.py获得的sys.argv就是['hello.py']；
+运行python3 hello.py Michael获得的sys.argv就是['hello.py', 'Michael']。
+
+最后，注意到这两行代码：
+if __name__=='__main__':
+    test()
+当我们在命令行运行hello模块文件时，Python解释器把一个特殊变量__name__置为__main__，而如果在其他地方导入该hello模块时，if判断将失败，因此，这种if测试可以让一个模块通过命令行运行时执行一些额外的代码，最常见的就是运行测试。
+
+----------------------------------------
+作用域
+在一个模块中，我们可能会定义很多函数和变量，但有的函数和变量我们希望给别人使用，有的函数和变量我们希望仅仅在模块内部使用。在Python中，是通过_前缀来实现的。
+
+类似_xxx和__xxx这样的函数或变量就是非公开的（private），不应该被直接引用
+
+private函数或变量不应该被别人引用，那它们有什么用呢？请看例子：
+def _private_1(name):
+    return 'Hello, %s' % name
+
+def _private_2(name):
+    return 'Hi, %s' % name
+
+def greeting(name):
+    if len(name) > 3:
+        return _private_1(name)
+    else:
+        return _private_2(name)
+
+我们在模块里公开greeting()函数，而把内部逻辑用private函数隐藏起来了，这样，调用greeting()函数不用关心内部的private函数细节，这也是一种非常有用的代码封装和抽象的方法，即：
+☆外部不需要引用的函数全部定义成private，只有外部需要引用的函数才定义为public。
+
+###
+在网上以及评论区看到很多人把这个讲得过于专业化，不易理解，下面是我本人简易理解，希望对大家有帮助。
+
+当我们写好一个模块，也就是一个.py文件的时候，比如在Pycharm里面：
+
+(1)第一种情况：我们可以直接运行这个.py文件，也就是当作了主模块，那么__name__这个特殊变量就会被赋值为：'__main__'，当你点击运行后，这个if语句后面会自动执行。
+
+(2)第二种情况：我们可以在其他模块(其他.py)文件通过import第一种的模块，但是这种情况 那个模块的__name__就不是'__main__'了，所以if语句判断失败，if下面的语句都不会自动执行。
+
+通俗来讲就是，if后面的代码第一种会自动执行，第二种会被屏蔽掉，可用来方便测试。比如我们在一个模块定义了一些有用的函数，当然可以在if语句里面进行测试，而其他模块进行调用该函数时候，为了简化代码，肯定不需要看到该模块的测试，只需要引用到该函数的定义就好了，所以通过if就可以屏蔽掉不需要的代码。
+
+讲的不够好，希望对大家多多少少有点帮助
+###
+===================================================
+
+安装第三方模块
+
+pip
+
+安装第三方模块
+https://www.anaconda.com
+
+
+模块搜索路径
+

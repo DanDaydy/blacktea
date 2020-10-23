@@ -1,0 +1,74 @@
+给定一个字符串和一个字符串字典，找到字典里面最长的字符串，该字符串可以通过删除给定字符串的某些字符来得到。如果答案不止一个，返回长度最长且字典顺序最小的字符串。如果答案不存在，则返回空字符串。
+
+示例 1:
+输入:
+s = "abpcplea", d = ["ale","apple","monkey","plea"]
+输出: 
+"apple"
+
+示例 2:
+输入:
+s = "abpcplea", d = ["a","b","c"]
+输出: 
+"a"
+
+=================================================
+
+思路：
+
+双指针思路
+如果有一个单词，怎么判断它能不能通过s删去字符来获得呢？
+
+i, j = 0, 0
+while i < len(s) and j < len(word):
+	if s[i] == word[j]:
+		i += 1
+		j += 1
+	else:
+		i += 1
+
+
+----------------
+
+# 对每一个单词都进行比较
+
+class Solution:
+    def findLongestWord(self, s: str, d: List[str]) -> str:
+        length, ans = 0, ""
+        for word in d:
+            i, j = 0, 0
+            if len(s) < len(word):
+                continue
+            while i < len(s) and j < len(word):
+                if s[i] == word[j]:
+                    j += 1
+                i += 1
+            if j == len(word):
+                if j > length:
+                    length, ans = j, word
+                elif j == length and word < ans:
+                    length, ans = j, word
+        return ans
+
+==================================
+
+# 灵活运用sort()和find()
+# sort()本身不太花时间，实际上是双指针的效率远小于find()
+
+class Solution:
+    def findLongestWord(self, s: str, d: List[str]) -> str:
+        ## 用好python内置函数sort()、find(),比双指针效率更高
+        ## 可以用元组表示多关键字排序，第一关键字是长度降序，第二关键字是字符串本身字典序
+        d.sort(key = lambda x: (-len(x), x))
+
+        for word in d:
+            index = 0
+            for ch in word:
+                index = s.find(ch, index) + 1  # find输出-1:False
+                if not index:
+                    break
+            else:       # 这里用else语句保证break之后不会执行，正常循环结束会执行
+                return word
+        return ''
+
+

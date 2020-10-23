@@ -1,0 +1,43 @@
+在二维空间中有许多球形的气球。对于每个气球，提供的输入是水平方向上，气球直径的开始和结束坐标。由于它是水平的，所以y坐标并不重要，因此只要知道开始和结束的x坐标就足够了。开始坐标总是小于结束坐标。平面内最多存在104个气球。
+
+一支弓箭可以沿着x轴从不同点完全垂直地射出。在坐标x处射出一支箭，若有一个气球的直径的开始和结束坐标为 x_start，x_end， 且满足  x_start ≤ x ≤ x_end，则该气球会被引爆。可以射出的弓箭的数量没有限制。 弓箭一旦被射出之后，可以无限地前进。我们想找到使得所有气球全部被引爆，所需的弓箭的最小数量。
+
+Example:
+输入:
+[[10,16], [2,8], [1,6], [7,12]]
+输出:
+2
+解释:
+对于该样例，我们可以在x = 6（射爆[2,8],[1,6]两个气球）和 x = 11（射爆另外两个气球）。
+
+=======================================================
+
+思路：
+
+先按起点进行sort
+
+跟435差不多
+关键在于两次判断
+如果两个区间根本不挨着，才会再开一箭     是 < 而不是 <=   （只有这里跟435是不同的）
+
+如果它们两个挨着，优先保留区间小的那个
+
+
+===========================================
+
+class Solution:
+    def findMinArrowShots(self, points: List[List[int]]) -> int:
+        points.sort(key = lambda x:x[0])
+
+        intervals = []
+        for i in range(len(points)):
+            if not intervals:
+                intervals.append(points[i])
+            else:
+                if intervals[-1][1] < points[i][0]:
+                    intervals.append(points[i])
+                else:
+                    if intervals[-1][-1] > points[i][1]:
+                        intervals.pop()
+                        intervals.append(points[i])
+        return len(intervals)

@@ -1,0 +1,258 @@
+这一章的问题主要是累积函数，用来表示随着任务的进行的一些资源约束，比如工人数量和预算等。
+
+
+问题还是那个样子
+1.建5所房子，还是10个任务
+2.任务优先级约束
+3.三个工人，这次没有名字，因为他们所有活儿都能干
+4.还是一个工人每次只能干一个任务，而且开始了不能终止
+5.现在引入了现金预算，一开始有个值，后来每隔60天增加一些
+6.任务开始的时候要付钱，一下把任务所需的钱全部付清，也就是没有预算的话就不能开始这项任务
+7.目标是使总体完工时间最小
+
+
+主要用到的是cumul_function
+然后用atomic demand functions来修改它
+
+比如说对于工人数量的这个累积函数，开始一项任务，在这个任务的区间变量上就要+1
+对于预算来说，一开始给一个值，在后面固定的时间点给它增加一个定值，在任务开始的时候要减去任务需要的花费
+然后用约束来限制两个累积函数，一个是不能超过3，一个是不能小于0
+
+
+
+===================================================
+Chapter 5. Using cumulative functions in the house building problem
+累积函数
+
+有些任务必须在其他任务之前发生，并且每个任务都有预定义的持续时间。 而且，有三个工人，每个任务需要三个工人中的任何一个。 一个工人一次最多只能分配一项任务。 此外，还有一个具有初始余额的现金预算。 每个任务在开始时都会消耗一定数量的预算，现金余额每60天增加一次。
+
+
+This chapter introduces:
+
+    use the modeling function cumul_function,
+    use the functions pulse, step, step_at_start and step_at_end.
+
+
+Problem to be solved
+
+问题在于，以计划满足时间约束并使标准最小化的方式，将开始日期分配给一组任务。 此问题的标准是最大程度地减少总体完成日期。 每个任务每天需要200美元，应在任务开始时支付。 从第0天开始，每60天将30,000美元加到现金余额中。
+
+ask 	Duration 	Preceding tasks
+masonry 	35 	
+carpentry 15 	masonry
+plumbing 40 	masonry
+ceiling 	15 	masonry
+roofingv 	5 	carpentry
+painting 	10 	ceiling
+windows 	5 	roofing
+facade 	10 	roofing, plumbing
+garden 	5 	roofing, plumbing
+moving 	5 	windows, facade, garden,painting
+
+对于必须建造的五座房屋，每一个都有最早的开始日期。
+House 	Earliest starting date
+0 	31
+1 	0
+2 	90
+3 	120
+4 	90
+
+解决问题包括确定任务的开始日期，以使总的完成日期最小化。
+
+----->Step 1: Describe the problem
+
+What is the known information in this problem ?
+
+三名工人将建造五栋房屋。 对于每个房屋，有十个房屋建造任务，每个任务都有给定的大小和成本。 对于每个任务，都有一个必须启动的任务列表。 存在给定金额的初始现金余额，并且每60天，现金余额将增加给定金额。
+
+What are the decision variables or unknowns in this problem ?
+未知是每个任务将开始的时间点。 一旦确定开始日期，整个完成日期也将确定。
+
+What are the constraints on these variables ?
+有一些约束条件指定特定任务可能要等到一个或多个给定任务完成后才能开始。 每个任务需要三个工人中的任何一个。 此外，还有一些约束条件指定一次只能将一个工作人员分配给一个任务。 在开始任务之前，现金余额必须足够大才能支付任务的费用。
+
+What is the objective ?
+目的是最大程度地减少总体完成日期。
+
+
+----->Step 2: Prepare data
+在相关数据文件中，提供的数据包括房屋数量（NbHouses），工人数量（NbWorkers），任务名称（TaskNames），任务size（Duration），优先级关系（Precedences） ，以及房屋的最早开始日期（ReleaseDate）。
+
+NbWorkers = 3
+NbHouses  = 5
+
+TaskNames = {"masonry","carpentry","plumbing",
+             "ceiling","roofing","painting",
+             "windows","facade","garden","moving"}
+
+Duration =  [35, 15, 40, 15, 5, 10, 5, 10, 5, 5]
+
+ReleaseDate = [31, 0, 90, 120, 90]
+
+Precedences = [("masonry", "carpentry"), ("masonry", "plumbing"), ("masonry", "ceiling"),
+               ("carpentry", "roofing"), ("ceiling", "painting"), ("roofing", "windows"),
+               ("roofing", "facade"), ("plumbing", "facade"), ("roofing", "garden"),
+               ("plumbing", "garden"), ("windows", "moving"), ("facade", "moving"),
+               ("garden", "moving"), ("painting", "moving")]
+
+Houses = range(NbHouses)
+Workers = range(NbWorkers)
+
+----->Step 3: Create the interval variables
+
+import sys
+from docplex.cp.model import *
+
+mdl4 = CpoModel()
+
+itvs = {}
+for h in Houses:
+    for i,t in enumerate(TaskNames):
+        itvs[h,t] = mdl4.interval_var(start = [ReleaseDate[h], INTERVAL_MAX], size=Duration[i])
+
+
+由于工人在这个问题上是等效的，因此最好将它们表示为一个工人池，而不是像前面的示例中那样将其表示为没有重叠约束的单个工人。 可以通过需要工作程序的时间间隔变量来修改表示该工作程序池用法的表达式。
+
+为了对有限数量的工人和有限的预算进行建模，我们需要表示与区间变量相关的各个贡献的总和。 对于现金预算，某些任务一开始会消耗一些预算。 对于工人，任务仅在任务期间需要工人。
+
+
+----->Step 4: Declare the worker usage function
+#工人使用函数
+
+累积函数表达式可用于对一段时间内的资源使用函数建模。 
+可以将该函数计算为对资源的时间间隔变量需求的总和。 间隔通常在开始时增加累积的资源使用功能，而在结束时释放资源时减少（脉冲功能）。 对于可以通过活动生产和消耗的资源（例如库存或储罐中的物品），资源水平也可以描述为时间的函数。 生产活动将在活动的开始或结束时间增加资源水平，而消耗活动将减少资源水平。 活动对资源的累计贡献可以用时间的函数表示，并且可以在此函数上建模约束（例如，最大或安全级别）。
+
+在任何给定的时刻，表达式的值都被约束为非负数。 可以使用atomic demand functions来修改累积函数表达式：
+
+    step(), which increases or decreases the level of the function by a given amount at a given time
+在给定的时间将the level of the function增加或减少给定的数量
+
+    pulse(), which increases or decreases the level of the function by a given amount for the length of a given interval variable or fixed interval
+在给定间隔变量或固定间隔的长度内，将the level of the function增加或减少给定量
+
+    step_at_start(), which increases or decreases the level of the function by a given amount at the start of a given interval variable
+在给定的间隔变量开始时，将the level of the function增加或减少给定的数量
+
+    step_at_end(), which increases or decreases the level of the function by a given amount at the end of a given interval variable
+在给定的间隔变量结束时，将the level of the function增加或减少给定的数量
+
+
+通过限制the function≤capacity，可以限制累积函数表达式来建模有限的资源容量。
+
+需要两个累积功能，一个代表工人的使用情况，另一个代表现金余额。 从任务间隔的开始到结束，每个任务都需要一名工作人员。
+
+累积函数表达式workerUsage用于表示任务需要工作人员的事实。 
+限制此功能在任何时间点都不能超过工人人数。 
+函数pulse（）在间隔上将表达式调整给定的数量。 将所有间隔变量上的这些脉冲原子相加得到一个表达式，该表达式表示工人在建造房屋的整个时间范围内的使用情况。
+
+
+#简单的说就是先用step_at函数初始化
+#然后去定义在每一个任务的区间变量上，都加个1
+#来说明每一项任务的执行都需要用到一个工人
+workers_usage = step_at(0, 0)
+for h in Houses:
+    for t in TaskNames:
+        workers_usage += mdl4.pulse(itvs[h,t],1)
+#			这个函数就是传入一个区间变量，一个给定的数量
+#			在区间变量上+1，所以叫脉冲pulse
+
+
+----->Step 5: Declare the cash budget function
+
+A cumulative function cach也用于建模现金预算。 若要将初始现金余额设置为30,000美元，并每60天将余额增加30,000美元，可使用函数step_at（）在给定日期将固定值表达式递增或递减固定值。
+每项任务需要每天支付相当于任务期限200美元的现金，并在任务开始时支付。 函数step_at_start（）用于将现金余额累积函数表达式调整为适合每个任务的金额。
+
+#同理，先初始化，然后每60天增加30000，但这里用到了p in Houses，意味不明
+#按理说应该是p in 一个设置的最大的期限
+cash = step_at(0, 0)
+for p in Houses:
+    cash += mdl4.step_at(60*p, 30000)
+
+#在一个区间变量（一个任务）开始的时候，减去200*天数的金额
+for h in Houses:
+    for i,t in enumerate(TaskNames):
+        cash -= mdl4.step_at_start(itvs[h,t], 200*Duration[i])
+
+
+----->Step 6: Add the temporal constraints
+#优先级约束
+for h in Houses:
+    for p in Precedences:
+        mdl4.add( mdl4.end_before_start(itvs[h,p[0]], itvs[h,p[1]]) )
+
+----->Step 7: Add the worker usage constraint
+#工人人数约束   同时开始的任务不能超过工人的人数
+mdl4.add( workers_usage <= NbWorkers )
+
+----->Step 8: Add the cash budget constraint
+#预算约束
+mdl4.add( cash >= 0 )
+
+----->Step 9: Add the objective
+#最小化总体完工日期
+mdl4.add(
+    mdl4.minimize( 
+        mdl4.max( mdl4.end_of(itvs[h,"moving"]) for h in Houses)
+    )
+)
+
+
+----->Step 10: Solve the model
+
+# Solve the model
+print("\nSolving model....")
+msol4 = mdl4.solve(FailLimit=30000)
+print("done")
+
+
+if msol4:
+    print("Cost will be " + str( msol4.get_objective_values()[0] ))
+
+    import docplex.cp.utils_visu as visu
+    import matplotlib.pyplot as plt
+    %matplotlib inline
+    #Change the plot size
+    from pylab import rcParams
+    rcParams['figure.figsize'] = 15, 3
+
+    workersF = CpoStepFunction()
+    cashF = CpoStepFunction()
+    for p in range(5):
+        cashF.add_value(60 * p, INT_MAX, 30000)
+    for h in Houses:
+        for i,t in enumerate(TaskNames):
+            itv = msol4.get_var_solution(itvs[h,t])
+            workersF.add_value(itv.get_start(), itv.get_end(), 1)
+            cashF.add_value(itv.start, INT_MAX, -200 * Duration[i])
+
+    visu.timeline('Solution SchedCumul')
+    visu.panel(name="Schedule")
+    for h in Houses:
+        for i,t in enumerate(TaskNames):
+            visu.interval(msol4.get_var_solution(itvs[h,t]), h, t)
+    visu.panel(name="Workers")
+    visu.function(segments=workersF, style='area')
+    visu.panel(name="Cash")
+    visu.function(segments=cashF, style='area', color='gold')
+    visu.show()
+else:
+    print("No solution found")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

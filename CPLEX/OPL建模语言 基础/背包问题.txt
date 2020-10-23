@@ -1,0 +1,61 @@
+
+
+一个背包有7种资源（例如体积、重量），每个资源的总量为(18209, 7692, 1333, 924, 26638, 61188, 13360 )。有12个物品，每个物品对应的价格为(96, 76, 56, 11, 86, 10, 66, 86, 83, 12, 9, 81 )。一个物品放入背包时，所占用的资源不同（见表）。问题是如何放置，使总的价格最多。
+
+#跟0-1背包问题不一样，这里意思应该是12种物品，每种物品可以放入多个
+
+资源集合   R    j  \in R
+物品集合   I     i   \in  I
+
+资源r的总量     L_j
+物品i的价格      P_i
+物品i放入背包时占用资源j的量     C_ij
+
+决策变量
+物品i放入背包的个数    U_i    
+
+目标函数
+\max  \sum_i  (U_i \cdot P_i)
+
+约束条件
+\sum_i(U_i \cdot C_ij) \le L_j   ， \forall j
+
+--------------------------------------------
+
+int nbItems = ...;
+int nbResources = ...;
+range Items = 1..nbItems;
+range Resources = 1..nbResources;
+
+int capacity[Resources] = ...;
+int value[Items] = ...;
+int use[Resources][Items] = ...;
+
+int maxValue = max(r in Resources) capacity[r];
+dvar int take[Items] in 0..maxValue;
+
+constraint ct;
+
+maximize
+  sum(i in Items)take[i] * value[i];
+
+subject to{
+  ct = forall(r in Resources)
+       sum(i in Items)take[i] * use[r][i] <= capacity[r];
+}
+
+数据文件
+nbResources = 7;
+nbItems = 12;
+capacity = [ 18209, 7692, 1333, 924, 26638, 61188, 13360 ];
+value = [ 96, 76, 56, 11, 86, 10, 66, 86, 83, 12, 9, 81 ];
+use = [
+      [ 19,   1,  10,  1,   1,  14, 152, 11,  1,   1, 1, 1 ],
+      [  0,   4,  53,  0,   0,  80,   0,  4,  5,   0, 0, 0 ],
+      [  4, 660,   3,  0,  30,   0,   3,  0,  4,  90, 0, 0],
+      [  7,   0,  18,  6, 770, 330,   7,  0,  0,   6, 0, 0],
+      [  0,  20,   0,  4,  52,   3,   0,  0,  0,   5, 4, 0],
+      [  0,   0,  40, 70,   4,  63,   0,  0, 60,   0, 4, 0],
+      [  0,  32,   0,  0,   0,   5,   0,  3,  0, 660, 0, 9]];
+
+

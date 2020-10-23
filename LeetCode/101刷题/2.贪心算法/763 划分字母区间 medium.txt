@@ -1,0 +1,61 @@
+字符串 S 由小写字母组成。我们要把这个字符串划分为尽可能多的片段，同一个字母只会出现在其中的一个片段。返回一个表示每个字符串片段的长度的列表。
+
+ 
+
+示例 1：
+
+输入：S = "ababcbacadefegdehijhklij"
+输出：[9,7,8]
+解释：
+划分结果为 "ababcbaca", "defegde", "hijhklij"。
+每个字母最多出现在一个片段中。
+像 "ababcbacadefegde", "hijhklij" 的划分是错误的，因为划分的片段数较少。
+
+
+==========================
+
+思路：
+
+1.非常巧妙的一种思路
+
+# 灵活运用enumerate，非常巧妙
+class Solution:
+    def partitionLabels(self, S: str) -> List[int]:
+    	max_index = {s:i for i, s in enumerate(S)}
+    	start, end = 0, 0
+    	res = []
+    	
+    	for i, s in enumerate(S):
+    		end = max(end, max_index[s])
+    		if i == end:
+    			res.append(end - start + 1)
+    			start = end + 1
+    	return res
+
+
+2.尝试把数据处理成区间那样，速度是更快一些的；速度击败100% Python3用户
+# dict.values()   返回字典里所有的值
+
+class Solution:
+    def partitionLabels(self, S: str) -> List[int]:
+        intervals={}
+        for i in range(len(S)):
+            # 如果第一次出现就加入区间[i,i]
+            if S[i] not in intervals:
+                intervals[S[i]]=[i,i]
+            # 如果已经出现过，就更新区间终点
+            else:
+                intervals[S[i]][1]=i
+        # 把所有区间取出放入列表, 然后根据区间起点排序
+        temp=list(intervals.values())
+        temp.sort(key=lambda x:x[0])
+        ans = []
+        for i in range(len(temp)):
+            # 不可能存在相等的情况，区间完全不相交，直接加上即可
+            if not ans or ans[-1][1] < temp[i][0]:
+                ans.append(temp[i])
+            # 在区间重叠的情况下，如果终点更大，则更新
+            elif temp[i][1] > ans[-1][1]:
+                ans[-1][1] = temp[i][1]
+        res=[x[1] - x[0] + 1 for x in ans]              
+        return res

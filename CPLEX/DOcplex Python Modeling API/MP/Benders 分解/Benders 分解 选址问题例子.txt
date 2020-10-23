@@ -1,0 +1,9 @@
+
+Benders分解简介以及选址问题例子
+https://www.jianshu.com/p/2faf276b75ac
+	例子的完整代码
+	https://github.com/xianqiu/opt-alg-tutorials/tree/master/math-prog/facility-location
+
+
+
+

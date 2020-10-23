@@ -1,0 +1,110 @@
+Benders分解是一种解决可分解结构的数学规划问题的方法。
+
+从12.7开始，CPLEX可以将模型分解为单个主问题和（可能有多个）子问题。
+
+为此，CPLEX可以使用为模型提供的注释，也可以自动进行分解。 此方法可以应用于混合整数线性程序（MILP）。 对于某些类型的问题，此方法可以显著提高性能。
+
+注意：如果您的问题与此类分解不匹配，CPLEX将在解决时引发错误。
+
+如果带注释的分解未产生不相交的子问题，CPLEX将产生错误CPXERR_BAD_DECOMPOSITION
+
+
+
+
+Learn more bout Benders decomposition
+
+原始论文的流行接受是建议对模型进行分解或划分以支持混合整数程序的解决方案，由此产生了“ Benders算法”的名称。
+
+    J. Benders. Partitioning procedures for solving mixed-variables programming problems in Numerische Mathematik, volume 4, issue 1, pages 238–252, 1962
+
+
+其他研究人员开发了切线生成线性程序（CGLP）的理论来促进这一实践。
+
+M. Fischetti, D. Salvagnin, A. Zanette. A note on the selection of Benders’ cuts in Mathematical Programming, series B, volume 124, pages 175-182, 2010
+
+
+还有一些人将该实践应用于实际运筹研究。 该技术报告以“现代”术语描述了Benders算法，并提供了实现提示。
+
+    M. Fischetti, I. Ljubic, M. Sinnl. Benders decomposition without separability: a computational study for capacitated facility location problems in Technical Report University of Padova, 2016
+
+
+How decision optimization can help
+
+规范分析（决策优化）技术可根据预期结果建议操作。 它考虑了特定的方案，资源以及过去和当前事件的知识。 有了这种洞察力，您的组织可以做出更好的决策并更好地控制业务成果。
+
+规范分析是迈向基于洞察力的行动之路的下一步。 它通过与预测分析的协同作用来创造价值，预测分析可以分析数据以预测未来的结果。
+
+规范分析通过建议处理未来情况的最佳方法，将这一见解提升到了新的水平。 能够在动态条件下快速行动并在不确定的环境中做出卓越决策的组织可以获得强大的竞争优势。
+
+     自动执行复杂的决策和权衡，以更好地管理您有限的资源。
+     利用未来的机会或减轻未来的风险。
+     根据事件的变化主动更新建议。
+     达到运营目标，提高客户忠诚度，防止威胁和欺诈并优化业务流程。
+
+
+Use decision optimization
+
+
+Step 1: Import the library
+
+运行以下代码以导入Decision Optimization CPLEX建模库。 DOcplex库包含前面提到的两个建模程序包，数学编程和约束编程。
+
+import sys
+try:
+    import docplex.mp
+except:
+    raise Exception('Please install docplex. See https://pypi.org/project/docplex/')
+
+
+Step 2: Set up the prescriptive model
+
+我们将编写a toy model 只是为了展示如何使用annotationAPI。
+
+该模型并不重要：它只匹配一个弯头分解，即CPLEX可以应用其新算法而不会出现任何错误。
+
+本笔记本的目的是发现和学习如何成功应用Benders，而不是看到标准解决方案和基于Benders的解决方案之间的巨大性能差异。
+
+
+
+
+
+Solve with Decision Optimization
+
+
+如果使用的是CPLEX运行时社区版，则根据问题的大小，解决阶段可能会失败，并且需要付费订购或安装产品。
+
+借助时间限制参数，您将在n秒后获得最佳解决方案。
+
+
+
+Step 3: Solve the problem with default CPLEX algorithm
+
+
+Step 4: Apply a Benders strategy
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

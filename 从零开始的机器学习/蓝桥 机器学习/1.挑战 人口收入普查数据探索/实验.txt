@@ -1,0 +1,233 @@
+
+
+1.问题：数据集中有多少男性和女性？
+
+data['sex'].value_counts()
+
+Male      21790
+Female    10771
+Name: sex, dtype: int64
+
+-------------
+
+2.问题：数据集中女性的平均年龄是多少？
+
+data[data['sex'] == 'Female'].mean()
+
+age                   36.858230
+fnlwgt            185746.311206
+education-num         10.035744
+capital-gain         568.410547
+capital-loss          61.187633
+hours-per-week        36.410361
+dtype: float64
+
+
+data[data['sex'] == 'Female']['age'].mean()
+
+36.85823043357163
+
+
+-------------------
+
+3.问题：数据集中德国公民的比例是多少？
+
+data['native-country'].value_counts(normalize = True)['Germany']
+
+0.004207487485028101
+
+
+答案是
+float((data['native-country'] == 'Germany').sum()) / data.shape[0]
+
+
+
+----------------------------
+
+4.问题：年收入超过 50K 和低于 50K 人群年龄的平均值和标准差是多少？
+
+data.groupby(by='salary')['age'].agg([np.mean,np.std])
+
+ 	mean 	std
+salary 		
+<=50K 	36.783738 	14.020088
+>50K 	44.249841 	10.519028
+
+------------------------------
+
+5.问题：年收入超过 50K 的人群是否都接受过高中以上教育？
+
+data[data['salary'] == '>50K']['education'].value_counts(normalize = True)
+
+Bachelors       0.283255
+HS-grad         0.213621
+Some-college    0.176891
+Masters         0.122306
+Prof-school     0.053947
+Assoc-voc       0.046040
+Doctorate       0.039026
+Assoc-acdm      0.033797
+10th            0.007907
+11th            0.007652
+7th-8th         0.005101
+12th            0.004209
+9th             0.003443
+5th-6th         0.002041
+1st-4th         0.000765
+Name: education, dtype: float64
+
+
+A：大部分接受了高中以上的教育
+
+
+data[data['salary'] == '>50K']['education'].unique()
+
+unique()：返回参数数组中所有不同的值，并按照从小到大排序
+
+
+------------------------------------------
+
+6.问题：使用 groupby 和 describe 统计不同种族和性别人群的年龄分布数据。
+
+data.groupby(['race','sex'])['age'].describe()
+
+
+		count 	mean 	std 	min 	25% 	50% 	75% 	max
+race 	sex 								
+Amer-Indian-Eskimo 	Female 	119.0 	37.117647 	13.114991 	17.0 	27.0 	36.0 	46.00 	80.0
+Male 	192.0 	37.208333 	12.049563 	17.0 	28.0 	35.0 	45.00 	82.0
+Asian-Pac-Islander 	Female 	346.0 	35.089595 	12.300845 	17.0 	25.0 	33.0 	43.75 	75.0
+Male 	693.0 	39.073593 	12.883944 	18.0 	29.0 	37.0 	46.00 	90.0
+Black 	Female 	1555.0 	37.854019 	12.637197 	17.0 	28.0 	37.0 	46.00 	90.0
+Male 	1569.0 	37.682600 	12.882612 	17.0 	27.0 	36.0 	46.00 	90.0
+Other 	Female 	109.0 	31.678899 	11.631599 	17.0 	23.0 	29.0 	39.00 	74.0
+Male 	162.0 	34.654321 	11.355531 	17.0 	26.0 	32.0 	42.00 	77.0
+White 	Female 	8642.0 	36.811618 	14.329093 	17.0 	25.0 	35.0 	46.00 	90.0
+Male 	19174.0 	39.652498 	13.436029 	17.0 	29.0 	38.0 	49.00 	90.0
+
+
+data.groupby(['race','sex'])['age'].describe(percentiles=[])
+
+ 	count 	mean 	std 	min 	50% 	max
+race 	sex 						
+Amer-Indian-Eskimo 	Female 	119.0 	37.117647 	13.114991 	17.0 	36.0 	80.0
+Male 	192.0 	37.208333 	12.049563 	17.0 	35.0 	82.0
+Asian-Pac-Islander 	Female 	346.0 	35.089595 	12.300845 	17.0 	33.0 	75.0
+Male 	693.0 	39.073593 	12.883944 	18.0 	37.0 	90.0
+Black 	Female 	1555.0 	37.854019 	12.637197 	17.0 	37.0 	90.0
+Male 	1569.0 	37.682600 	12.882612 	17.0 	36.0 	90.0
+Other 	Female 	109.0 	31.678899 	11.631599 	17.0 	29.0 	74.0
+Male 	162.0 	34.654321 	11.355531 	17.0 	32.0 	77.0
+White 	Female 	8642.0 	36.811618 	14.329093 	17.0 	35.0 	90.0
+Male 	19174.0 	39.652498 	13.436029 	17.0 	38.0 	90.0
+
+
+
+
+答案：
+for (race, sex), sub_df in data.groupby(['race', 'sex']):
+    print("Race: {0}, sex: {1}".format(race, sex))
+    print(sub_df['age'].describe())
+
+#这里有助于理解groupby之后的数据结构
+
+
+
+
+----------------------------------------
+
+7.问题：统计男性高收入人群中已婚和未婚（包含离婚和分居）人群各自所占数量。
+
+
+data[(data['sex']=='Male') & (data['salary'] == '>50K')]['marital-status'].value_counts()
+
+Married-civ-spouse       5938
+Never-married             325
+Divorced                  284
+Separated                  49
+Widowed                    39
+Married-spouse-absent      23
+Married-AF-spouse           4
+Name: marital-status, dtype: int64
+
+
+
+答案：
+
+#有待商榷
+
+#男性 未婚 的薪水状况
+data[(data['sex'] == 'Male') &
+     (data['marital-status'].isin(['Never-married',
+                                   'Separated', 'Divorced']))]['salary'].value_counts()
+
+#男性  已婚  的薪水状况
+data[(data['sex'] == 'Male') &
+     (data['marital-status'].str.startswith('Married'))]['salary'].value_counts()
+
+
+#所有的婚姻状况
+data['marital-status'].value_counts()
+
+
+
+
+
+------------------------------------------
+
+8.问题：统计数据集中最长周工作小时数及对应的人数，并计算该群体中收入超过 50K 的比例。
+
+data['hours-per-week'].max()
+
+99
+
+
+data[data['hours-per-week'] == 99].shape[0]
+
+85人
+
+
+data[(data['hours-per-week'] == 99) & (data['salary']=='>50K')].shape[0]/85
+
+0.29411764705882354
+
+
+--------------------------------------
+
+9.问题：计算各国超过和低于 50K 人群各自的平均周工作时长。
+
+data.groupby(['native-country','salary'])['hours-per-week'].mean()
+
+native-country  salary
+?               <=50K     40.164760
+                >50K      45.547945
+Cambodia        <=50K     41.416667
+                >50K      40.000000
+Canada          <=50K     37.914634
+                            ...    
+United-States   >50K      45.505369
+Vietnam         <=50K     37.193548
+                >50K      39.200000
+Yugoslavia      <=50K     41.600000
+                >50K      49.500000
+Name: hours-per-week, Length: 82, dtype: float64
+
+
+
+答案：
+
+
+#方法一
+for (country, salary), sub_df in data.groupby(['native-country', 'salary']):
+    print(country, salary, round(sub_df['hours-per-week'].mean(), 2))
+
+
+
+
+
+# 方法二
+pd.crosstab(data['native-country'], data['salary'],
+            values=data['hours-per-week'], aggfunc=np.mean).T
+
+
+

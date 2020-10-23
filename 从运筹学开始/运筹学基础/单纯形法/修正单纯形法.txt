@@ -1,0 +1,4 @@
+https://mp.weixin.qq.com/s?__biz=MzU0NzgyMjgwNg==&mid=2247484676&idx=1&sn=ac20e43cab975d9c76f0104695097c11&chksm=fb49c8bdcc3e41abc43162609ba5352cffc239e04493a67a1d02b529c3feb652d30653236e47&scene=21#wechat_redirect
+
+
+修正单纯形法(revised simplex algorithm)

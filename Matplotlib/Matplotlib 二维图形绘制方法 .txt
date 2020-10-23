@@ -1,0 +1,169 @@
+https://www.lanqiao.cn/courses/1093/learning/?id=6141
+
+
+Matplotlib 二维图形绘制方法 
+
+Matplotlib 是支持 Python 语言的开源绘图库，因为其支持丰富的绘图类型、简单的绘图方式以及完善的接口文档，深受 Python 工程师、科研学者、数据工程师等各类人士的喜欢。
+
+知识点
+    二维图形绘制
+    子图及组合图形
+    兼容 MATLAB 风格 API
+
+=====================================================
+简单图形绘制
+
+使用 Matplotlib 提供的面向对象 API，需要导入 pyplot 模块，并约定简称为 plt。
+
+from matplotlib import pyplot as plt
+
+plt.plot([1, 2, 3, 2, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1])
+
+plt.plot() 是 pyplot 模块下面的直线绘制（折线图）方法类。示例中包含了一个 [1, 2, 3, 2, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1] 列表，Matplotlib 会默认将该列表作为 𝑦 值，而 𝑥 值会从 0 开始依次递增。
+
+当然，如果你需要自定义横坐标值，只需要传入两个列表即可。如下方代码，我们自定义横坐标刻度从 2 开始。
+plt.plot([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+         [1, 2, 3, 2, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1])
+
+-------------------------------------------------
+pyplot 模块中 pyplot.plot 方法是用来绘制折线图的。你应该会很容易联想到，更改后面的方法类名就可以更改图形的样式。的确，在 Matplotlib 中，大部分图形样式的绘制方法都存在于 pyplot 模块中。例如：
+
+方法 	含义
+matplotlib.pyplot.angle_spectrum 	绘制电子波谱图
+matplotlib.pyplot.bar 	绘制柱状图
+matplotlib.pyplot.barh 	绘制直方图
+matplotlib.pyplot.broken_barh 	绘制水平直方图
+matplotlib.pyplot.contour 	绘制等高线图
+matplotlib.pyplot.errorbar 	绘制误差线
+matplotlib.pyplot.hexbin 	绘制六边形图案
+matplotlib.pyplot.hist 	绘制柱形图
+matplotlib.pyplot.hist2d 	绘制水平柱状图
+matplotlib.pyplot.pie 	绘制饼状图
+matplotlib.pyplot.quiver 	绘制量场图
+matplotlib.pyplot.scatter 	散点图
+matplotlib.pyplot.specgram 	绘制光谱图
+
+---------------------------------------------------
+matplotlib.pyplot.plot(*args, **kwargs) 方法严格来讲可以绘制线形图或者样本标记。其中，*args 允许输入单个 𝑦 值或 𝑥,𝑦 值。
+
+import numpy as np  # 载入数值计算模块
+# 在 -2PI 和 2PI 之间等间距生成 1000 个值，也就是 X 坐标
+X = np.linspace(-2*np.pi, 2*np.pi, 1000)
+# 计算 y 坐标
+y = np.sin(X)
+# 向方法中 `*args` 输入 X，y 坐标
+plt.plot(X, y)
+
+正弦曲线就绘制出来了。但值得注意的是，pyplot.plot 在这里绘制的正弦曲线，实际上不是严格意义上的曲线图，而在两点之间依旧是直线。这里看起来像曲线是因为样本点相互挨得很近。
+
+--------------------------------------------------------
+柱形图 matplotlib.pyplot.bar(*args, **kwargs) 大家应该都非常了解了。这里，我们直接用上面的代码，仅把 plt.plot(X, y) 改成 plt.bar(X, y) 试一下。
+
+plt.bar([1, 2, 3], [1, 2, 3])
+
+---------------------------------
+散点图 matplotlib.pyplot.scatter(*args, **kwargs) 就是呈现在二维平面的一些点，这种图像的需求也是非常常见的。比如，我们通过 GPS 采集的数据点，它会包含经度以及纬度两个值，这样的情况就可以绘制成散点图。
+
+# X,y 的坐标均有 numpy 在 0 到 1 中随机生成 1000 个值
+X = np.random.ranf(1000)
+y = np.random.ranf(1000)
+# 向方法中 `*args` 输入 X，y 坐标
+plt.scatter(X, y)
+
+--------------------------------------
+饼状图 matplotlib.pyplot.pie(*args, **kwargs) 在有限列表以百分比呈现时特别有用，你可以很清晰地看出来各类别之间的大小关系，以及各类别占总体的比例。
+
+matplotlib.pyplot.pie(*args, **kwargs)
+plt.pie([1, 2, 3, 4, 5])
+
+--------------------------------------
+量场图 matplotlib.pyplot.quiver(*args, **kwargs) 就是由向量组成的图像，在气象学等方面被广泛应用。从图像的角度来看，量场图就是带方向的箭头符号。
+
+X, y = np.mgrid[0:10, 0:10]
+plt.quiver(X, y)
+
+---------------------------------------
+等高线图 matplotlib.pyplot.contourf(*args, **kwargs) 是工程领域经常接触的一类图
+# 生成网格矩阵
+x = np.linspace(-5, 5, 500)
+y = np.linspace(-5, 5, 500)
+X, Y = np.meshgrid(x, y)
+# 等高线计算公式
+Z = (1 - X / 2 + X ** 3 + Y ** 4) * np.exp(-X ** 2 - Y ** 2)
+
+plt.contourf(X, Y, Z)
+
+--------------------------------------
+
+定义图形样式
+
+上面，我们绘制了简单的基础图形，但这些图形都不美观。你可以通过更多的参数来让图形变得更漂亮。
+
+我们已经知道了，线形图通过 matplotlib.pyplot.plot(*args, **kwargs) 方法绘出。其中，args 代表数据输入，而 kwargs 的部分就是用于设置样式参数了。
+
+二维线形图 包含的参数 超过 40 余项，其中常用的也有 10 余项，选取一些比较有代表性的参数列举如下：
+
+参数 	含义
+alpha= 	设置线型的透明度，从 0.0 到 1.0
+color= 	设置线型的颜色
+fillstyle= 	设置线型的填充样式
+linestyle= 	设置线型的样式
+linewidth= 	设置线型的宽度
+marker= 	设置标记点的样式
+…… 	……
+
+------------------------------------
+组合图形样式
+
+------------------------------------
+定义图形位置
+
+------------------------------------
+规范绘图方法
+	添加图标题、图例
+	线型、颜色、透明度
+	画布网格、坐标轴范围
+
+
+
+图形标注方法
+
+兼容 MATLAB 代码风格接口
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

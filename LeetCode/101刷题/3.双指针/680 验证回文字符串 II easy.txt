@@ -1,0 +1,62 @@
+给定一个非空字符串 s，最多删除一个字符。判断是否能成为回文字符串。
+
+示例 1:
+
+输入: "aba"
+输出: True
+
+示例 2:
+
+输入: "abca"
+输出: True
+解释: 你可以删除c字符。
+
+============================
+
+思路：
+
+双指针，一个从左往右，一个从右往左
+如果两边不一样，那么要不然删去左边的，要不然删去右边的
+删完之后如果有一边形成回文，则返回True，否则返回False
+
+
+class Solution:
+    def validPalindrome(self, s: str) -> bool:
+        if s == s[::-1]:
+            return True
+        
+        left, right = 0, len(s)-1
+        while left < right:
+            if s[left] != s[right]:
+                temp1 = s[:left]+s[left+1:]
+                temp2 = s[:right]+s[right+1:]
+                if temp1 == temp1[::-1] or temp2 == temp2[::-1]:
+                    return True
+                else:
+                    return False
+            left += 1
+            right -= 1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

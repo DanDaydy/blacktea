@@ -1,0 +1,202 @@
+函数式编程
+
+高阶函数
+Higher-order function
+
+☆变量可以指向函数
+函数本身也可以赋值给变量，即：变量可以指向函数。
+f = abs
+f
+<built-in function abs>
+
+☆函数名也是变量
+abs = 10
+把abs指向10后，就无法通过abs(-10)调用该函数了
+
+☆传入函数
+☆既然变量可以指向函数，函数的参数能接收变量，那么一个函数就可以接收另一个函数作为参数，这种函数就称之为高阶函数。
+def add(x, y, f):
+    return f(x) + f(y)
+
+print(add(-5, 6, abs))
+
+--------------------
+小结
+☆把函数作为参数传入，这样的函数称为高阶函数，函数式编程就是指这种高度抽象的编程范式。
+
+==========================================
+map/reduce
+
+map()函数
+接收两个参数，一个是函数，一个是Iterable，map将传入的函数依次作用到序列的每个元素，并把结果作为新的Iterator返回
+###
+map(func, *iterables) --> map object
+创建一个迭代器，该迭代器使用每个可迭代对象的参数来计算函数。 当最短的迭代次数用尽时停止。
+###
+
+def f(x):
+	return x * x
+r = map(f,[1,2,3,4,5,6,7,8,9])
+list(r)
+[1, 4, 9, 16, 25, 36, 49, 64, 81]
+
+--------------------------
+reduce
+把一个函数作用在一个序列[x1, x2, x3, ...]上，这个函数必须接收两个参数，reduce把结果继续和序列的下一个元素做累积计算
+###
+reduce
+reduce(function, sequence[, initial]) -> value
+将两个参数的函数从左到右累计应用于序列的项，以将序列缩小为单个值。例如，reduce（lambda x，y：x + y，[1、2、3 ，4，5]）计算（（（（（1 + 2）+3）+4）+5）。 如果存在initial，则将其放在计算中序列的项目之前，并在序列为空时用作默认值。
+###
+
+把序列[1, 3, 5, 7, 9]变换成整数13579:
+from functools import reduce
+def fn(x, y):
+	return x * 10 + y
+reduce(fn, [1, 3, 5, 7, 9])
+13579
+
+---
+#把str转换为int的函数：
+from functools import reduce
+DIGITS = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9}
+def str2int(s):
+    def fn(x, y):
+        return x * 10 + y
+    def char2num(s):
+        return DIGITS[s]
+    return reduce(fn, map(char2num, s))
+
+###
+from functools import reduce
+DIGITS = {'0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9}
+def char2num(s):
+    return DIGITS[s]
+def str2int(s):
+    return reduce(lambda x, y: x * 10 + y, map(char2num, s))
+
+---------
+1.利用map()函数，把用户输入的不规范的英文名字，变为首字母大写，其他小写的规范名字。
+def normalize(name):
+	s = name.lower()
+	l = s[0].upper() + s[1:]
+	return l
+
+2.请编写一个prod()函数，可以接受一个list并利用reduce()求积
+from functools import reduce
+def prod(L):
+	s = reduce(lambda x, y : x * y, L)
+	return s
+
+3.利用map和reduce编写一个str2float函数，把字符串'123.456'转换成浮点数123.456
+from functools import reduce
+def str2float(s):
+	PASS
+
+=======================================================
+filter
+
+☆filter()函数用于过滤序列
+###
+filter
+filter(function or None, iterable) --> filter object
+返回一个迭代器，该迭代器产生那些针对其 function(item) 为true的可迭代项。 如果function为None，则返回true。
+###
+
+filter()也接收一个函数和一个序列。
+filter()把传入的函数依次作用于每个元素，然后根据返回值是True还是False决定保留还是丢弃该元素
+
+在一个list中，删掉偶数，只保留奇数，可以这么写：
+def is_odd(n):
+    return n % 2 == 1
+list(filter(is_odd, [1, 2, 4, 5, 6, 9, 10, 15]))
+
+----------
+用filter求素数
+#从3开始的奇数序列生成器
+def _odd_iter():
+    n = 1
+    while True:
+        n = n + 2
+        yield n
+#筛选函数
+def _not_divisible(n):
+    return lambda x:x % n > 0
+#不断返回下一个素数的生成器
+def primes():
+    yield 2
+    it = _odd_iter()
+    while True:
+        n = next(it)
+        yield n
+        it = filter(_not_divisible(n),it)
+#调用时设置退出循环条件
+for n in primes():
+    if n < 1000:
+        print(n)
+    else:
+        break
+
+-----------------------------
+练习
+利用filter()筛选出回数
+#自然数生成器
+def _nature_number():
+	pass
+
+---------------------------------
+小结
+filter()的作用是从一个序列中筛出符合条件的元素。由于filter()使用了惰性计算，所以只有在取filter()结果的时候，才会真正筛选并每次返回下一个筛出的元素。
+
+=======================================================
+sorted
+###
+sorted(iterable, /, *, key=None, reverse=False)
+返回一个新列表，其中包含迭代中所有项目的升序排列。
+可以提供自定义键功能以自定义排序顺序，并且可以设置反向标志以按降序请求结果。
+###
+key指定的函数将作用于list的每一个元素上，并根据key函数返回的结果进行排序。
+
+
+排序算法
+sorted()函数就可以对list进行排序：
+sorted([36, 5, -12, 9, -21])
+[-21, -12, 5, 9, 36]
+
+sorted()函数也是一个高阶函数，它还可以接收一个key函数来实现自定义的排序，例如按绝对值大小排序：
+sorted([36, 5, -12, 9, -21], key=abs)
+[5, 9, -12, -21, 36]           #这里是很值得注意的
+
+再看一个字符串排序的例子：
+sorted(['bob', 'about', 'Zoo', 'Credit'])
+['Credit', 'Zoo', 'about', 'bob']
+
+给sorted传入key函数，即可实现忽略大小写的排序：
+sorted(['bob', 'about', 'Zoo', 'Credit'], key=str.lower)
+['about', 'bob', 'Credit', 'Zoo']
+
+要进行反向排序，不必改动key函数，可以传入第三个参数reverse=True：
+sorted(['bob', 'about', 'Zoo', 'Credit'], key=str.lower, reverse=True)
+['Zoo', 'Credit', 'bob', 'about']     #reverse默认为False
+
+--------------------
+小结
+sorted()也是一个高阶函数。用sorted()排序的关键在于实现一个映射函数。
+
+--------------------
+练习
+
+假设我们用一组tuple表示学生名字和成绩：
+L = [('Bob', 75), ('Adam', 92), ('Bart', 66), ('Lisa', 88)]
+用sorted()对上述列表分别按名字排序：
+L = [('Bob', 75), ('Adam', 92), ('Bart', 66), ('Lisa', 88)]
+def by_name(t):
+	s = t[0].lower()
+	return s
+L2 = sorted(L, key=by_name)
+
+再按成绩从高到低排序：
+def by_score(t):
+    return -t[-1]
+L3 = sorted(L, key=by_score)
+

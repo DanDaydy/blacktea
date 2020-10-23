@@ -1,0 +1,168 @@
+
+
+使用Python API
+
+
+问题描述
+最大化 	x 1 + 2x 2 + 3x 3
+
+约束 	
+–x 1 + x 2 + x 3 ≤ 20
+x 1 – 3x 2 + x 3 ≤ 30
+
+使用这些边界 	
+0 ≤ x 1 ≤ 40
+0 ≤ x 2 ≤ infinity
+0 ≤ x 3 ≤ infinity 
+
+
+=======================================
+
+import cplex
+from cplex.exceptions import CplexError
+import sys
+
+# 所有函数共有的通用数据
+#目标函数里的系数
+my_obj      = [1.0, 2.0, 3.0]
+#决策变量上界
+my_ub       = [40.0, cplex.infinity, cplex.infinity]
+#决策变量下界
+
+#决策变量名字
+my_colnames = ["x1", "x2", "x3"]
+#Right-hand sides
+my_rhs      = [20.0, 30.0]
+#约束条件的名字
+my_rownames = ["c1", "c2"]
+#这里应该是两个小于等于的意思
+my_sense    = "LL"
+
+
+
+
+#按行添加数据
+def populatebyrow(prob):
+    #问题是求maximize
+    prob.objective.set_sense(prob.objective.sense.maximize)
+
+    # 决策变量的下界都是0（默认值也是0），所以这里就省略了
+    #拒测变量在目标函数里的系数，决策变量的上下界，决策变量的名字
+    #往变量里添加
+    prob.variables.add(obj = my_obj, ub = my_ub, names = my_colnames)
+
+
+
+    # 可以查询以下界限和名称之类的变量：
+    # lbs是所有下限的列表
+    lbs = prob.variables.get_lower_bounds()
+    # ub1是第一个下限
+    ub1 = prob.variables.get_upper_bounds(0)
+    # names is ["x1", "x3"]
+    names = prob.variables.get_names([0, 2])
+
+
+
+
+    #很调皮，左半部分其实是两种表达方式的混写
+    #所以其实可以写成[0,1,2]或者["x1","x2","x3"]
+    rows = [[[0,"x2","x3"],[-1.0, 1.0,1.0]],
+            [["x1",1,2],[ 1.0,-3.0,1.0]]]
+    #往线性约束里添加约束条件的左半部分，符号，右边值，约束的名字
+    prob.linear_constraints.add(lin_expr = rows, senses = my_sense,
+                                rhs = my_rhs, names = my_rownames)
+
+    # 因为有两个参数，所以它们被用来指定一个范围
+    # because there are two arguments, they are taken to specify a range
+    # 因此，cols是作为列向量列表的整个约束矩阵
+    cols = prob.variables.get_cols("x1", "x3")
+
+
+#按列来添加数据
+def populatebycolumn(prob):
+    #同理，先确定目标是最大化还是最小化
+    prob.objective.set_sense(prob.objective.sense.maximize)
+
+    #往约束里添加右边值，符号，约束条件名字
+    prob.linear_constraints.add(rhs = my_rhs, senses = my_sense,
+                                names = my_rownames)
+
+    c = [[[0,1],[-1.0, 1.0]],
+         [["c1",1],[ 1.0,-3.0]],
+         [[0,"c2"],[ 1.0, 1.0]]]
+
+    #往变量里添加 决策变量在目标函数里的系数，上下界，列名字?，列数据?
+    prob.variables.add(obj = my_obj, ub = my_ub, names = my_colnames,
+                       columns = c)
+
+#非零数据添加
+def populatebynonzero(prob):
+    prob.objective.set_sense(prob.objective.sense.maximize)
+
+    prob.linear_constraints.add(rhs = my_rhs, senses = my_sense,
+                                names = my_rownames)
+    prob.variables.add(obj = my_obj, ub = my_ub, names = my_colnames)
+
+    rows = [0,0,0,1,1,1]
+    cols = [0,1,2,0,1,2]
+    vals = [-1.0,1.0,1.0,1.0,-3.0,1.0]
+
+    prob.linear_constraints.set_coefficients(zip(rows, cols, vals))
+    # 一次也可以改变一个系数
+
+    # prob.linear_constraints.set_coefficients(1,1,-3.0)
+    # 或传递三元组列表
+    # prob.linear_constraints.set_coefficients([(0,1,1.0), (1,1,-3.0)])
+
+
+def lpex1(pop_method):
+    try:
+        my_prob = cplex.Cplex()
+
+        if pop_method == "r":
+            handle = populatebyrow(my_prob)
+        if pop_method == "c":
+            handle = populatebycolumn(my_prob)
+        if pop_method == "n":
+            handle = populatebynonzero(my_prob)
+
+        my_prob.solve()
+    except CplexError, exc:
+        print exc
+        return
+
+    numrows = my_prob.linear_constraints.get_num()
+    numcols = my_prob.variables.get_num()
+
+    print
+    # solution.get_status() 返回整数代码
+    print "Solution status = " , my_prob.solution.get_status(), ":",
+    #以下行将打印相应的字符串
+    print my_prob.solution.status[my_prob.solution.get_status()]
+    print "Solution value  = ", my_prob.solution.get_objective_value()
+    slack = my_prob.solution.get_linear_slacks()
+    pi    = my_prob.solution.get_dual_values()
+    x     = my_prob.solution.get_values()
+    dj    = my_prob.solution.get_reduced_costs()
+    for i in range(numrows):
+        print "Row %d:  Slack = %10f  Pi = %10f" % (i, slack[i], pi[i])
+    for j in range(numcols):
+        print "Column %d:  Value = %10f Reduced cost = %10f" % (j, x[j], dj[j])
+
+    my_prob.write("lpex1.lp")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

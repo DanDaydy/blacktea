@@ -1,0 +1,226 @@
+高级特性
+
+切片
+迭代
+列表生成式
+生成器
+迭代器
+
+======================================================
+切片
+Python提供了切片（Slice）操作符
+
+L = ['Michael', 'Sarah', 'Tracy', 'Bob', 'Jack']
+L[0:3]
+['Michael', 'Sarah', 'Tracy']
+
+L[0:3]表示，从索引0开始取，直到索引3为止，但不包括索引3。
+即索引0，1，2，正好是3个元素。
+
+倒数切片
+L[-2:]
+['Bob', 'Jack']
+
+☆tuple也是一种list，唯一区别是tuple不可变。因此，tuple也可以用切片操作，只是操作的结果仍是tuple
+☆字符串'xxx'也可以看成是一种list，每个元素就是一个字符。因此，字符串也可以用切片操作，只是操作结果仍是字符串
+
+----------
+#练习
+利用切片操作，实现一个trim()函数，去除字符串首尾的空格，注意不要调用str的strip()方法：
+def trim(s):
+    for i in s:
+        if s[:1] == ' ':
+            s = s[1:]
+        if s[-1:] == ' ':
+            s = s[:-1]
+    return s
+
+=======================================================
+迭代
+
+☆如果给定一个list或tuple，我们可以通过for循环来遍历这个list或tuple，这种遍历我们称为迭代（Iteration）。dict，字符串都是可迭代对象。
+
+在Python中，迭代是通过for ... in来完成的。
+
+☆默认情况下，dict迭代的是key。如果要迭代value，可以用for value in d.values()，如果要同时迭代key和value，可以用for k, v in d.items()。
+
+当我们使用for循环时，只要作用于一个可迭代对象，for循环就可以正常运行，而我们不太关心该对象究竟是list还是其他数据类型。
+
+☆函数enumerate()    把一个list变成索引-元素对
+for i, value in enumerate(['A', 'B', 'C']):
+	print(i, value)
+0 A
+1 B
+2 C
+
+--------------------------------------------------------------
+请使用迭代查找一个list中最小和最大值，并返回一个tuple：
+
+def findMinAndMax(L):
+    if L:
+        m = L[0]
+        n  = L[0]
+        for i in L:
+            if i > m:
+                m = i
+            elif i < n:
+                n = i
+        return n, m
+    else:
+        return (None, None)
+
+=======================================================
+列表生成式
+
+列表生成式即List Comprehensions，是Python内置的非常简单却强大的可以用来创建list的生成式
+
+L = [ ]
+for x in range(1,11):
+    L.append(x * x)
+print(L)
+[1, 4, 9, 16, 25, 36, 49, 64, 81, 100]
+
+☆列表生成式则可以用一行语句代替循环生成上面的list：
+[x * x for x in range(1,11)]
+
+☆for循环后面还可以加上if判断，这样我们就可以筛选出仅偶数的平方：
+[x * x for x in range(1, 11) if x % 2 == 0]
+[4, 16, 36, 64, 100]
+
+☆使用两层循环，可以生成全排列：
+[m + n for m in 'ABC' for n in 'XYZ']
+['AX', 'AY', 'AZ', 'BX', 'BY', 'BZ', 'CX', 'CY', 'CZ']
+
+把一个list中所有字符变成小写：
+L = ['Hello', 'World', 'IBM', 'Apple']
+[s.lower() for s in L]
+['hello', 'world', 'ibm', 'apple']
+
+---------
+if ... else
+
+列表生成式中：
+
+跟在for后面的if是一个筛选条件，不能带else
+[x for x in range(1, 11) if x % 2 == 0]
+
+for前面的部分是一个表达式，它必须根据x计算出一个结果
+[x if x % 2 == 0 else -x for x in range(1, 11)]
+
+☆在一个列表生成式中，for前面的if ... else是表达式，而for后面的if是过滤条件，不能带else
+
+---------------
+练习：
+L = ['Hello', 'World', 18, 'Apple', None]
+
+#这种会删去不是str的元素
+[s.lower() for s in L if isinstance(s,str)]
+
+#下面这种并不会删去不是str的元素
+[s.lower() if isinstance(s,str) == True else s for s in L]
+=======================================================
+生成器
+
+如果列表元素可以按照某种算法推算出来，那我们是否可以在循环的过程中不断推算出后续的元素呢？这样就不必创建完整的list，从而节省大量的空间。
+☆在Python中，这种一边循环一边计算的机制，称为生成器：generator。
+
+要创建一个generator，有很多种方法。第一种方法很简单，只要把一个列表生成式的[]改成()，就创建了一个generator：
+g = (x * x for x in range(10))
+创建L和g的区别仅在于最外层的[]和() 
+
+☆打印出generator的每一个元素
+如果要一个一个打印出来，可以通过next()函数获得generator的下一个返回值：
+next(g)
+0
+next(g)
+1
+...
+#很不常用，最后会有迭代错误
+
+正确的方法是使用for循环，因为generator也是可迭代对象：
+g = (x * x for x in range(10))
+for n in g:
+    print(n)
+
+打印出斐波拉契数列：     #1, 1, 2, 3, 5, 8, 13, 21, 34, ...
+def fib(max):
+    n,a,b = 0,0,1
+    while n < max:
+        print(b)
+        a,b= b, a+ b     #注意这个赋值语句
+        n = n + 1
+    return 'done'
+
+上面的函数和generator仅一步之遥。要把fib函数变成generator，只需要把print(b)改为yield b就可以了：
+def fib(max):
+    n, a, b = 0, 0, 1
+    while n < max:
+        yield b              #yield：出产，产生
+        a, b = b, a + b
+        n = n + 1
+    return 'done'
+
+☆定义generator的另一种方法：如果一个函数定义中包含yield关键字，那么这个函数就不再是一个普通函数，而是一个generator
+
+函数是顺序执行，遇到return语句或者最后一行函数语句就返回。
+而变成generator的函数，在每次调用next()的时候执行，遇到yield语句返回，再次执行时从上次返回的yield语句处继续执行。
+#所以上面的fib()去执行并不能得到最后的'done'，需要捕获StopIteration错误，返回值包含在StopIteration的value中，后面错误处理部分会讲。
+
+---------------------
+练习
+杨辉三角
+1
+11
+121
+1331
+14641
+...
+把每一行看做一个list，试写一个generator，不断输出下一行的list：
+def triangles():
+    l = [1]
+    while True:
+        yield l                 # generator每次迭代的断点设置处
+        l = [0] + l + [0]  # 左右添项
+        l = [l[i] + l[i + 1] for i in range(len(l) - 1)]   # 列表生成器 i + 1 -> [0, len - 1)
+
+--------------------
+小结
+☆generator是非常强大的工具，在Python中，可以简单地把列表生成式改成generator，也可以通过函数实现复杂逻辑的generator。
+
+☆要理解generator的工作原理，它是在for循环的过程中不断计算出下一个元素，并在适当的条件结束for循环。对于函数改成的generator来说，遇到return语句或者执行到函数体最后一行语句，就是结束generator的指令，for循环随之结束。
+
+=======================================================
+迭代器
+
+可以直接作用于for循环的数据类型有以下几种：
+☆一类是集合数据类型，如list、tuple、dict、set、str等；
+☆一类是generator，包括生成器和带yield的generator function。
+这些可以直接作用于for循环的对象统称为可迭代对象：Iterable。
+
+可以使用isinstance()判断一个对象是否是Iterable对象
+
+可以被next()函数调用并不断返回下一个值的对象称为迭代器：Iterator
+#显然生成器不但可以作用于for循环，还可以被next()函数不断调用并返回下一个值
+
+-------------------------
+小结
+凡是可作用于for循环的对象都是Iterable类型；
+凡是可作用于next()函数的对象都是Iterator类型，它们表示一个惰性计算的序列；
+集合数据类型如list、dict、str等是Iterable但不是Iterator，不过可以通过iter()函数获得一个Iterator对象。
+
+例如，for循环：
+for x in [1, 2, 3, 4, 5]:
+    pass
+
+完全等价于：
+# 首先获得Iterator对象:
+it = iter([1, 2, 3, 4, 5])
+# 循环:
+while True:
+    try:
+        # 获得下一个值:
+        x = next(it)
+    except StopIteration:
+        # 遇到StopIteration就退出循环
+        break
+

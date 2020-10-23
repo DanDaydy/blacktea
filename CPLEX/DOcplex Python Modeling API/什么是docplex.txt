@@ -1,0 +1,64 @@
+非官方的介绍 https://blog.csdn.net/yaologos/article/details/85284768
+
+
+官方手册页面https://www.ibm.com/support/knowledgecenter/zh/SSSA5P_12.10.0/com.ibm.docplex.help/DOcplex/topics/DOcplex_home.html
+
+
+IBM Decision Optimization CPLEX Modeling for Python（也称为DOcplex）是一个由两个模块组成的库：
+
+     使用docplex.mp（DOcplex.MP）的Python数学编程建模
+     使用docplex.cp（DOcplex.CP）的Python约束编程模型
+
+DOcplex是用于优化的本地Python建模库。
+
+它与NumPy和pandas库兼容，可以从PyPI或conda程序包管理器中获得。
+
+
+无论是Jupyter Notebook还是Python模型，都可以使用DOcplex示例进行约束编程和数学编程。
+
+-----------------------------------------------------------------------------------------------
+
+https://www.ibm.com/support/knowledgecenter/zh/SSSA5P_12.10.0/com.ibm.docplex.help/DOcplex/topics/DOcplex_examples.html
+-->讲解
+这些教程以Jupyter笔记本的形式提供，因此您可以按照自己的进度来学习它们。
+
+对于数学规划，您可以在Decision Optimization GitHub上找到两个入门教程：
+
+     线性规划，（CPLEX第1部分）
+https://github.com/IBMDecisionOptimization/docplex-examples/blob/master/examples/mp/jupyter/tutorials/Linear_Programming.ipynb
+#这里是关于线性规划的入门介绍
+#给了一个用DOcplex的入门建模例子
+
+
+     beyond线性规划，（CPLEX第2部分）
+
+
+对于约束规划，可以在Decision Optimization GitHub上找到入门教程：
+
+     DOcplex中的Scheduling入门
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

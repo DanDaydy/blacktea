@@ -1,0 +1,236 @@
+某公司生产氨气 (N H3) and 氯化铵 (N H4 Cl). 公司的日处理能力为50 单位的 氮 (N), 180 单位的氢 (H), 40 单位氯 (Cl).氨气的利润是 40 euros每单位、  氯化铵的利润是50 euros 每单位. 如何确定氨气 和 氯化铵的产量，使利润最大
+目标函数：max z=40*Gas+50*Chloride
+满足约束条件：Gas+Chloride<=50             
+              3*Gas+4*Chloride<=180
+              Chloride<=40 
+
+
+入门代码
+dvar float+ gas;
+dvar float+ chloride;
+//constraint naming. 
+constraint ct1;
+constraint ct2;
+constraint ct3;
+maximize
+  40 * gas + 50 * chloride;
+subject to {
+ct1=  gas + chloride <= 50;
+ct2=  3 * gas + 4 * chloride <= 180;
+ct3=  chloride <= 40;
+}
+
+
+-----------------------
+
+使用数组
+
+{string} Products = { "gas", "chloride" };
+{string} Components = { "nitrogen", "hydrogen", "chlorine" };
+
+float demand[Products][Components] = [ [1, 3, 0], [1, 4, 1] ];
+float profit[Products] = [40, 50];
+float stock[Components] = [50, 180, 40];
+
+dvar float+ production[Products];
+
+//constraint naming.
+constraint ct;
+
+maximize
+  sum (p in Products) profit[p] * production[p];
+subject to {
+ ct = forall (c in Components)
+    sum (p in Products) demand[p][c] * production[p] <= stock[c];
+}
+
+------------------------------------
+
+分离数据
+
+{string} Products = ...; 
+{string} Components = ...; 
+float demand[Products][Components] = ...; 
+float profit[Products] = ...; 
+float stock[Components] = ...; 
+
+
+新建一个数据文件
+Products = { "gas", "chloride" };
+Components = { "nitrogen", "hydrogen", "chlorine" };
+
+profit = [40, 50];
+stock = [50, 180, 40];
+demand = [[1 3 0 ], [ 1 4 1] ];
+
+
+规范的完整写法
+Products = { "gas", "chloride" };
+Components = { "nitrogen", "hydrogen", "chlorine" };
+
+profit = #["gas":40, "chloride":50]#;
+stock = #["nitrogen":50, "hydrogen":180, "chlorine":40]#;
+demand = #[
+            "gas":      #[ "nitrogen":1 "hydrogen":3 "chlorine":0 ]#,
+            "chloride": #[ "nitrogen":1 "hydrogen":4 "chlorine":1 ]#
+          ]#;
+
+---------------------------------------------------------------------------
+
+Tuples的用法
+
+一个工厂有3种产品(面条,面包,蛋糕)，各产品的市场需求量为(100,200,300)。 工厂可以自己生产产品，也外包生产。如果自己生产，每个产品消耗一定的资源（面粉和鸡蛋），资源总量为(20,40)。如何确定每种产品自己生产和外包的产量，使得总费用最小。
+
+
+产品集合 P   ，   p  \in P
+资源集合  R  ， r  \in R
+
+产品需求量 D_p
+资源限制  L_r
+自己生产单位p产品消耗r资源的数量     C_pr
+单位P产品自己生产的费用      Scost_p
+单位p产品外包生产的费用      Ocost_p
+
+决策变量
+自己生产p产品的数量   S_p
+外包生产p产品的数量   O_p
+
+目标函数
+\sum_p( S_p * Scost_p  + O_p * Ocost_p)
+
+s.t.
+#满足市场需求量
+S_p + O_p \ge D_p   ,  \forall p
+\sum(S_p \cdot C_pr)  \le L_r  ,  \forall r
+
+
+{string}Products =...;
+{string} Resources = ...;
+
+float demand[Products] = ...;
+float capacity[Resources] = ...;
+float consumption[Products][Resources] = ...;
+float insideCost[Products] = ...;
+float outsideCost[Products]  = ...;
+
+dvar float+ inside[Products];
+dvar float+ outside[Products];
+
+//constraint naming
+constraint ct1;
+constraint ct2;
+
+minimize
+   sum(p in Products) (insideCost[p]*inside[p] + outsideCost[p]*outside[p]);
+
+
+subject to {
+   ct1 = forall(r in Resources)
+      sum(p in Products) consumption[p][r] * inside[p] <= capacity[r];
+
+   ct2 = forall(p in Products)
+      inside[p] + outside[p] >= demand[p];
+}
+
+数据文件
+Products = {"Noodle", "Bread", "Cake" }; 
+Resources = { "flour", "eggs" }; 
+consumption = [ [0.5, 0.2], [0.4, 0.4], [0.3, 0.6] ]; 
+capacity = [ 20, 40 ]; demand = [ 100, 200, 300 ]; 
+insideCost = [ 0.6, 0.8, 0.3 ]; 
+outsideCost = [ 0.8, 0.9, 0.4 ]; 
+
+-------------------->
+
+使用Tuple
+
+{string} Products = ...;
+{string} Resources = ...;
+tuple ProductData {
+   float demand;
+   float insideCost;
+   float outsideCost;
+   float consumption[Resources];
+}
+ProductData product[Products] = ...;
+float capacity[Resources] = ...;
+
+dvar float+ inside[Products];
+dvar float+ outside[Products];
+
+minimize
+   sum(p in Products) (product[p].insideCost * inside[p] + 
+                       product[p].outsideCost * outside[p]);
+subject to {
+   forall(r in Resources)
+      sum(p in Products) product[p].consumption[r] * inside[p] <= capacity[r];
+   forall(p in Products)
+      inside[p] + outside[p] >= product[p].demand;
+}
+
+数据文件修改为：
+
+Products =  { "Noodle", "Bread", "Cake" };
+Resources = { "flour", "eggs" };
+product = #[
+      Noodle : < 100, 0.6, 0.8, [ 0.5, 0.2 ] >,
+      Bread : < 200, 0.8, 0.9, [ 0.4, 0.4 ] >,
+      Cake : < 300, 0.3, 0.4, [ 0.3, 0.6 ] >
+          ]#;
+capacity = [ 20, 40 ];
+
+Product的初始化也可以简化写为
+product = [
+      < 100, 0.6, 0.8, [ 0.5, 0.2 ] >,
+      < 200, 0.8, 0.9, [ 0.4, 0.4 ] >,
+      < 300, 0.3, 0.4, [ 0.3, 0.6 ] >
+          ];
+
+------------------------------
+显示结果
+
+ILOG提供脚本（Script）可以帮助显示程序运行的结果。
+
+--------------------------
+
+设置参数
+
+ILOG提供脚本（Script）可以设置一些CPLEX参数
+
+在前面的.mod文件的末尾加入以下代码：
+
+execute PARAMS {
+   cplex.tilim = 100;
+}
+
+
+CPLEX和OPL有很多可以设置的参数，具体可以参见帮助文档中的
+“CPLEX Parameters and OPL Parameters”
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

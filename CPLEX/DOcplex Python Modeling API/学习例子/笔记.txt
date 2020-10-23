@@ -1,0 +1,57 @@
+** The documentation can be found here: https://github.com/IBMDecisionOptimization/docplex-doc
+** The examples can be found here: https://github.com/IBMDecisionOptimization/docplex-examples
+
+
+color.py
+
+这个例子的描述是
+
+问题涉及为地图上的国家/地区选择颜色
+这样最多可以显示四种颜色（蓝色，白色，黄色，绿色）
+使用过，并且没有邻国使用相同的颜色。 在本练习中，您将找到六个国家/地区的地图着色问题的解决方案：
+比利时，丹麦，法国，德国，卢森堡和荷兰。
+
+#其实就是六个国家填成四种颜色，有一些约束指定比如比利时和德国颜色不一样，德国和荷兰颜色不一样，等等。
+
+
+-------------------------------------------------------------
+关键代码：
+from docplex.cp.model import CpoModel
+
+#建立Cpo模型     
+#约束编程(Constraint Programming, CP)是围绕关系约束这一数学概念建立起来的方法论
+mdl = CpoModel()
+
+#创建变量             整型          下界  上界   名字
+Belgium     = mdl.integer_var(0, 3, "Belgium")
+
+#创建约束   直接写成了数学约束的样子
+mdl.add(Belgium != France)
+
+#求解
+msol = mdl.solve(TimeLimit=10)
+----------------------------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

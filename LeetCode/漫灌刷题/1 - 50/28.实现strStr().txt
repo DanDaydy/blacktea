@@ -1,0 +1,92 @@
+实现 strStr() 函数。
+
+给定一个 haystack 字符串和一个 needle 字符串，在 haystack 字符串中找出 needle 字符串出现的第一个位置 (从0开始)。如果不存在，则返回  -1。
+
+示例 1:
+
+输入: haystack = "hello", needle = "ll"
+输出: 2
+
+
+
+思路：
+
+将一个长度为len(needle)的滑动窗口，沿着haystack逐步移动
+
+
+
+# 有机会再来看这个思路吧
+
+第二种思路是双指针
+只有子串的第一个字符跟 needle 字符串第一个字符相同的时候才需要比较
+其次，可以一个字符一个字符比较，一旦不匹配了就立刻终止
+
+
+
+
+======================
+
+滑动窗口：
+
+class Solution:
+    def strStr(self, haystack: str, needle: str) -> int:
+        l = len(haystack)
+        n = len(needle)
+        # 这里的+1是很关键的，考虑的是如果 l == n 的情况以及 n =""的情况
+        for i in range(l - n + 1):
+            if haystack[i:i+n] == needle:
+                return i
+        return -1
+
+
+
+双指针：
+
+class Solution:
+    def strStr(self, haystack: str, needle: str) -> int:
+        L, n = len(needle), len(haystack)
+        if L == 0:
+            return 0
+
+        pn = 0
+        while pn < n - L + 1:
+            # find the position of the first needle character
+            # in the haystack string
+            while pn < n - L + 1 and haystack[pn] != needle[0]:
+                pn += 1
+            
+            # compute the max match string
+            curr_len = pL = 0
+            while pL < L and pn < n and haystack[pn] == needle[pL]:
+                pn += 1
+                pL += 1
+                curr_len += 1
+            
+            # if the whole needle string is found,
+            # return its start position
+            if curr_len == L:
+                return pn - L
+            
+            # otherwise, backtrack
+            pn = pn - curr_len + 1
+            
+        return -1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

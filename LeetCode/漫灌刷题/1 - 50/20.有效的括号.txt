@@ -1,0 +1,69 @@
+给定一个只包括 '('，')'，'{'，'}'，'['，']' 的字符串，判断字符串是否有效。
+
+有效字符串需满足：
+
+    左括号必须用相同类型的右括号闭合。
+    左括号必须以正确的顺序闭合。
+
+注意空字符串可被认为是有效字符串。
+
+示例 1:
+
+输入: "()"
+输出: true
+
+
+
+思路：
+
+如果长度是奇数
+	返回 false
+
+dic = { 右 ： 左}
+
+stack = []
+对于s中的所有字符
+	如果ch在dic里
+		if stack是空的或者stack[-1] != dic[ch]
+			返回false
+		stack.pop()
+	else:
+		stack.append(ch)
+
+# 如果最后stack里还有字符，那显然也是不合法的字符串
+return not stack
+		
+========================================
+
+class Solution:
+    def isValid(self, s: str) -> bool:
+        if len(s) % 2 == 1:
+            return False
+        
+        dic = {')' : '(', ']' : '[', '}' : '{'}
+
+        stack = []
+
+        for ch in s:
+            if ch in dic:
+                if not stack or stack[-1] != dic[ch]:
+                    return False
+                stack.pop()
+            else:
+                stack.append(ch)
+        
+        return not stack
+
+
+
+
+
+
+
+
+
+复杂度分析
+
+    时间复杂度：O(n)，其中 n 是字符串 s 的长度。
+
+    空间复杂度：O(n+∣Σ∣)，其中 Σ表示字符集，本题中字符串只包含 6 种括号，∣Σ∣=6|。栈中的字符数量为 O(n)，而哈希映射使用的空间为 O(∣Σ∣)，相加即可得到总空间复杂度。

@@ -1,0 +1,121 @@
+一个工厂要生产71吨合金。该合金使用3种金属合成。生产该合金有四种途径：
+1）直接购买这3种金属合成，对应3种金属的价格是(22, 10, 13)万/吨；
+2）购买原材料（如矿石）炼制，现有2种原材料，价格分别为(6, 5)万/吨；第1种
+      原材料含3种金属的百分比为(0.2, 0.05, 0.05)，第二种是(0.01, 0, 0.3);
+3）购买废料炼制，现有2种废料，价格分别为(7, 8)万/吨；第1种原材料含3种金属的百分比为(0, 0.6, 0.4)，第二种是(0.01, 0, 0.7);
+4）购买锭铁。其价格为9万/吨；含3种金属的百分比为(0.1, 0.45, 0.45)
+
+生产合金时，合金中3种金属的最低含量的百分比为(0.05, 0.30, 0.60)，
+最高含量为(0.10, 0.40, 0.80)。
+
+决策问题是：选用哪种途径生产合金，每种途径购买的物料的量是多少。
+
+
+
+
+金属集合  M      i  \in M
+原材料集合   R   j  \in  R
+废料集合     G     k  \in  G
+锭铁   F 
+
+
+i金属的价格  P_i
+
+j原材料的价格   P_j
+单位j原材料含i金属的量     C_ji
+
+k废料的价格  P_k
+单位k废料含i金属的量     B_ki
+
+锭铁价格    P_F
+单位锭铁含i金属的量      F_i
+
+合金中i金属的最低百分比  product_i^{min}
+合金中i金属的最高百分比  product_i^{max}
+
+决策变量
+购买金属i的数量   w_i
+购买原材料j的数量   r_j
+购买废料k的数量    s_k
+购买锭铁的数量    d      整数
+
+
+目标函数
+\min
+\sum_i (P_i * w_i)  +
+\sum_j (P_j * r_j)  +
+\sum_k(P_k * s_k) +
+d * P_F
+
+
+----------------------------------------------------
+int   nbMetals = ...;
+int   nbRaw = ...;
+int   nbScrap = ...;
+int   nbIngo = ...;
+
+range Metals = 1..nbMetals;
+range Raws = 1..nbRaw;
+range Scraps = 1..nbScrap;
+range Ingos = 1..nbIngo;
+
+float costMetal[Metals] = ...;
+float costRaw[Raws] = ...;
+float costScrap[Scraps] = ...;
+float costIngo[Ingos] = ...;
+float low[Metals] = ...;
+float up[Metals] = ...;
+float percRaw[Metals][Raws] = ...;
+float percScrap[Metals][Scraps] = ...;
+float percIngo[Metals][Ingos] = ...;
+
+int alloy  = ...;
+
+dvar float+    w[Metals];
+dvar float+    r[Raws];
+dvar float+    s[Scraps];
+dvar int+      i[Ingos];
+dvar float m[j in Metals] in low[j] * alloy .. up[j] * alloy; 
+//合金中包含的每种金属的重量的取值范围
+
+constraint ct1;
+constraint ct2;
+
+minimize 
+   sum(j in Metals) costMetal[j] * w[j] +
+   sum(j in Raws)   costRaw[j]   * r[j] +
+   sum(j in Scraps) costScrap[j] * s[j] +
+   sum(j in Ingos)  costIngo[j]  * i[j];
+
+subject to {
+ct1=forall(j in Metals) 
+            m[j] == 
+             w[j] + 
+             sum(k in Raws)   percRaw[j][k] * r[k] +
+             sum(k in Scraps) percScrap[j][k] * s[k] +
+             sum(k in Ingos)  percIngo[j][k] * i[k];
+//符合合金中每种金属的重量的取值范围
+
+ct2=sum(j in Metals) m[j] == alloy; 
+//正好71吨
+}
+
+数据文件
+nbMetals = 3;
+nbRaw = 2;
+nbScrap = 2;
+nbIngo = 1;
+
+costMetal = [22, 10, 13];
+costRaw = [6, 5];
+costScrap = [ 7, 8];
+costIngo = [ 9 ];
+low = [0.05, 0.30, 0.60];
+up = [0.10, 0.40, 0.80];
+percRaw = [ [ 0.20, 0.01 ], [ 0.05, 0 ], [ 0.05, 0.30 ] ];
+percScrap = [ [ 0 , 0.01 ], [ 0.60, 0 ], [ 0.40, 0.70 ] ];
+percIngo = [ [ 0.10 ], [ 0.45 ], [ 0.45 ] ];
+alloy  = 71;
+
+----------------------------------------------------------------
+

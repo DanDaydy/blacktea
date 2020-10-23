@@ -1,0 +1,239 @@
+https://mp.weixin.qq.com/s?__biz=MzU0NzgyMjgwNg==&mid=2247484621&idx=1&sn=f2e92f44c2306b58034cf158647bc737&chksm=fb49c974cc3e406228737e1a986c73368131bc7f0c0251d82b1e64266220df59134ab0a9def1&scene=21#wechat_redirect
+
+https://blog.csdn.net/u011005745/article/details/108051760
+
+
+
+变邻域搜索算法(Variable Neighborhood Search,VNS)
+
+
+1.1
+局部搜索是解决优化问题的一种启发式算法。对于某些计算起来非常复杂的优化问题，比如各种NP-难问题，要找到最优解需要的时间随问题规模呈指数增长，因此诞生了各种启发式算法来退而求其次寻找次优解，
+☆是一种近似算法，以时间换精度的思想。局部搜索就是其中的一种方法。
+
+局部搜索算法是对一类算法的统称，符合其框架的算法很多，比如之前公众号推文中介绍的爬山法、模拟退火算法和禁忌搜索算法都属于局部搜索算法。
+☆尽管各个算法在优化过程中的细节存在差异，但在优化流程上呈现出很大的共性。
+
+☆它的基本原理是在邻近解中迭代，使目标函数逐步优化，直至不能再优化为止。
+
+1.2
+局部搜索算法的统一框架：
+1) 算法从一个或若干个初始解出发。
+2) 在算法参数控制下由当前状态的邻域中产生若干个候选解。
+3) 以某种策略在候选解中确定新的当前解。
+4) 伴随控制参数的调节，重复执行上述搜索过程，直至满足算法终止条件。
+5) 结束搜索过程并输出优化结果。
+
+1.3
+五大要素：
+1) 目标函数：用来判断解的优劣。
+2) 邻域的定义：根据不同问题，有着不同的邻域定义。
+3) 初始解的产生方法。
+4) 新解的产生和接受规则。
+5) 算法终止条件。
+
+☆其中前两个要素的定义和算法要解决的特定问题有关，而且不同的人对同一问题可能有完全不同的定义。后三个要素定义的不同则会产生各种不同的局部搜索算法，它们的效率和最终解的质量也会有很大的差异。
+
+=======================================
+2 变邻域搜索算法
+
+2.1
+变邻域搜索算法（VNS）就是一种改进型的局部搜索算法。它利用不同的动作构成的邻域结构进行交替搜索，在集中性和疏散性之间达到很好的平衡。
+
+变邻域搜索算法依赖于以下事实：
+1) 一个邻域结构的局部最优解不一定是另一个邻域结构的局部最优解。
+2) 全局最优解是所有可能邻域的局部最优解。
+
+变邻域搜索算法主要由以下两个部分组成：
+1) VARIABLE NEIGHBORHOOD DESCENT (VND)  #变邻域下降
+2) SHAKING PROCEDURE       #扰动
+
+2.2
+邻域就是指对当前解进行一个操作(这个操作可以称之为邻域动作)可以得到的所有解的集合。
+==>那么不同邻域的本质区别就在于邻域动作的不同了。
+
+2.3
+邻域动作是一个函数，通过这个函数，对当前解s，产生其相应的邻居解集合。
+
+2.4 Variable Neighborhood Descent (VND)
+（变邻域下降）
+VND是一个算法框架，它的过程描述如下：
+
+1) 给定初始解S； 定义m个邻域，记为N_k(k = 1, 2, 3......m)；i = 1。
+2) 使用邻域结构N_i（即 N_i(S)）进行搜索，如果在N_i(S)里找到一个比S更优的解S′，则令S=S′, i=1 。
+3) 如果搜遍邻域结构N_i仍找不到比S更优的解，则令i++。
+4) 如果i≤m ,转步骤2。
+5) 输出最优解S。
+
+即：
+1) 当在本邻域搜索找不出一个比当前解更优的解的时候，我们就跳到下一个邻域继续进行搜索。
+2) 当在本邻域搜索找到了一个比当前解更优的解的时候，我们就跳回第一个邻域重新开始搜索。
+
+----------------------------------------------------------------
+另一种说法   #明了的多
+VND method
+1.找一个初始解x
+2.重复以下流程直到没有改进:
+	(i) 令 l ← 1
+	(ii)重复以下步骤直到 l = l_max:
+		(a)找 x 最好的邻解 x'  (x' \in N_l(x))
+		(b)如果x'优于x，使x ← x' and l ← 1 ； 否则 l ← l + 1
+
+在搜索的过程中，遍历不同邻居方法产生的解的集合，如果在某个集合中最优邻域解优于最优解，就使用该解生成新的不同邻域解的集合，从头开始遍历这些邻域解方法，反之，继续从下一个方法产生的邻域解集合中寻找，直到遍历完所有的解集合。
+
+------------------------------------------------------------------
+☆VND伪代码描述：
+VND流程
+	s_0 ← 产生初始解，选择{N_k},k = 1,...,k_max
+	k ←  1
+	重复:
+		s'  ←  对邻域结构N_k进行搜索，找一个s'
+		如果 f(s') < f(s):   #s'比s更优
+			s ←  s' #s'赋值给s
+			k ← 1   #重置k
+		并不:
+			k ← k + 1
+	直到  k>k_max
+
+--------------------------------------
+2.5 shaking procedure
+说白了就是一个扰动算子，类似于邻域动作的这么一个东西。通过这个算子，可以产生不同的邻居解。
+
+2.6
+整个VNS过程的伪代码
+
+Input:       一个扰动用的邻域结构集合   N_k，k = 1,...,k_max
+	一个搜索用的邻域结构结合   N_l，l = 1,...,l_max
+
+x = x_0     #产生初始解
+k = 1
+Repeat:  
+	For k = 1 To k_max Do
+	从x的第k个邻域 N_k(x)中随机选一个解 x'
+	执行VND算法
+
+	For l = 1 To l_max Do
+		从N_l(x')中选一个 x' 的最好的邻解  x''
+		如果f(x'') < f(x'),赋值给x',重置l
+		其它则l = l + 1
+		Move or not:
+		如果局部最优解比x还好则
+			x = x''
+			继续搜索N_l(k = 1)
+		其它则 k = k + 1
+直到终止条件
+输出最优解
+
+
+#实际上看到这里似乎还是有些云里雾里，主要是这个伪代码的叙述没有看的太清楚
+
+===========================================
+基本的变邻域搜索方法
+
+1.找一个初始解 x ；选择一个终止条件；
+2.重复以下过程直到终止条件被满足:
+	(i) 令 k ← 1；
+	(ii)重复以下步骤直到 k = k_max：                         #一个点
+		(a)扰动。从 x 的 第 k 个邻域中随机产生一个解 x' (x' \in N_k(x))；
+		(b)本地搜索。使用以x'作为初始解，使用一些本地搜索方法，得到的			局部最优解标志为x''
+		(c)移动与否。如果局部最优解x''优于现在的x，x←x''，继续从N_1(k 		←1)进行搜索；否则，k ← k + 1
+
+-------------------------
+一般的变邻域搜索
+一般的变邻域搜索的方法是使用VND代替上面的Local Search的过程：
+General Variable Neighbourhood Search，GVNS
+
+GVNS method
+1.初始化:
+	选择一个用于扰动阶段的邻域结构N_k，for k = 1,...，k_max
+	选择一个用于本地搜索阶段的邻域结构N_l，for l = 1,...,l_max
+	找一个初始解，用 RVNS（BVNS?）改进它
+	选择终止条件
+2.迭代:
+重复以下序列直到结束:
+(i)k ← 1;
+(ii)重复以下步骤直到 k = k_max;
+	(a)扰动。从 x 的 第 k 个邻域中随机产生一个解 x' (x' \in N_k(x))；
+	(b)使用VND进行局部搜索。
+	令l ← 1；重复以下步骤直到 l = l_max;
+	1.寻找 x （这里似乎用x'更合适?）在邻域 N_l(x') 最优的邻解 x'';
+	2.如果f(x'') < f(x'),令x' ← x'' and l ← 1；否则 令 l ← l + 1;
+	#(b)这个步骤就相当于遍历了x'的邻域，找了个最优的x''
+	(c)移动与否
+	如果f(x'') < f(x)，move x ← x''，然后继续搜索N_1(k ← 1）;否则 k ← k + 1
+
+
+#这样就比较容易理解了。
+初始解x，扰动随机产生x'，然后按照本地搜索的邻域遍历x'的邻域，找到最优的x''。
+接着，比较x和x''的优劣性，更优则移动到x''重新进行上述搜索。
+
+==============================================
+
+邻域使用的算子    #产生邻域解集合的方法
+two_opt_swap
+区间反转，反转两个点（包含它们）之间的元素，在迭代局部搜索的代码中出现过。
+
+------------------------------------------------------------------
+迭代局部搜索中出现的代码:
+
+def swap_element(city_list, begin, end):
+	while  begin < end :
+		temp = city_list[begin]
+		city_list[begin] = city_list[end]
+		city_list[end] = temp
+		begin += 1
+		end -= 1
+
+def two_opt_swap(cities_route, index_i, index_j):
+	new_cities_route = copy.deepcopy(cities_route) 
+	swap_element(new_cities_route, index_i, index_j)
+	return new_cities_route
+
+------------------------------------------------------------------
+另一种:
+#随机翻转某个区间,产生       ☆最多max_num个邻居解
+def find_neighbour_one(path, weights, max_num):
+    solution_neighbours = []
+    for i in range(0, max_num):     #产生多个邻居解
+        # 随机选择两个端点, 不改变先后顺序
+        endpoints = random.sample(range(1, len(path)-1), 2)
+        endpoints.sort()
+        temp_path = copy.deepcopy(path)
+        temp_path[endpoints[0]:endpoints[1]] = list(reversed(temp_path[endpoints[0]:endpoints[1]]))
+        if temp_path not in solution_neighbours:
+            cost = fitness(temp_path, weights)
+            solution_neighbours.append([temp_path, cost])
+    return solution_neighbours
+
+------------------------------------------------------------------
+#随机交换两个城市,最多产生max_num个解
+def find_neighbour_zero(path, weights, max_num):
+    solution_neighbours = []
+    for i in range(0, max_num):
+        exchange = random.sample(range(1, len(path)-1), 2)
+        temp_path = copy.deepcopy(path)
+        temp_path[exchange[0]] = path[exchange[1]]
+        temp_path[exchange[1]] = path[exchange[0]]
+
+        if temp_path not in solution_neighbours:
+            cost = fitness(temp_path, weights)
+            solution_neighbours.append([temp_path, cost])
+    return solution_neighbours
+
+------------------------------------------------------------------
+#随机找两个城市放到序列最前面,产生最多max_num个邻居解
+def find_neighbour_two(path, weights, max_num):
+    solution_neighbours = []
+    for i in range(0, max_num):
+        # 随机选择两个city, 不改变先后顺序
+        endpoints = random.sample(range(1, len(path)-1), 2)
+        endpoints.sort()
+        temp_path = copy.deepcopy(path)
+        temp_path.pop(endpoints[0])
+        temp_path.pop(endpoints[1] - 1)
+        temp_path.insert(1, path[endpoints[0]])
+        temp_path.insert(2, path[endpoints[1]])
+        if temp_path not in solution_neighbours:
+            cost = fitness(temp_path, weights)
+            solution_neighbours.append([temp_path, cost])
+    return solution_neighbours

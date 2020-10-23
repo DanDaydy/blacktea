@@ -1,0 +1,24 @@
+class Solution:
+    def length(s):
+        list1 = []
+        for i in range(len(s)):
+            if s[i] in list1:
+                break
+            else:
+                list1.append(s[i])
+        return len(list1)
+
+    def lengthOfLongestSubstring(self, s: str) -> int:
+        if s == " ":
+            return 1
+        else:
+            i = 0
+            num = 0
+            while i < len(s):
+                temp = Solution.length(s[i:])
+                if num < temp:
+                    num = temp
+                i += 1
+            return num
+
+

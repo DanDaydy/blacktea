@@ -1,0 +1,21 @@
+凸集
+
+C  \in R^n    0< \lambda < 1
+若C中任意两点 x 和 y 的 凸组合  \lambda x + (1 - \lambda)y  \in C
+则称C是一个凸集
+
+
+
+凸函数
+K是 R^n 总的凸集
+f: X --> R^1
+对于任意的x,y \in K, \lambda \in [0,1]
+有
+f(\lambda x + (1-\lambda)y)  \le   \lambda f(x) + (1-\lambda)f(y)
+则称f为K上的凸函数
+
+
+凸规划
+设有非线性规划问题 \min_{x \in R} f(x)
+若可行域R是凸集，f(x)是R上的凸函数
+则称此规划问题为凸规划

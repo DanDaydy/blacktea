@@ -1,0 +1,172 @@
+
+# keywords
+
+False               def                 if                  raise
+None                del                 import              return
+True                elif                in                  try
+and                 else                is                  while
+as                  except              lambda              with
+assert              finally             nonlocal            yield
+break               for                 not
+class               from                or
+continue            global              pass
+
+
+
+# divmod()方法，返回一个元组，第一个元素是两参数整除，第二个元素是取余
+days = int(input("Enter days: "))
+print("Months = {} Days = {}".format(*divmod(days, 30)))
+
+
+# 逻辑运算符
+关系运算可以通过逻辑运算符 and 和 or 组合，比较的结果可以用 not 来取反意。逻辑运算符的优先级又低于关系运算符，在它们之中，not 具有最高的优先级，or 优先级最低
+
+
+a, b = 0, 1
+a, b = b, a + b
+先计算右边的值，再把值分别赋予给左边
+
+
+
+我们可以在循环后面使用可选的else语句。
+它将会在循环完毕后执行，除非有break语句终止了循环。
+Python中for循环的else子句给我们提供了检测循环是否顺利执行完毕的一种优雅方法。
+
+
+
+# 列表生成式
+squares = [x**2 for x in range(10)]
+列表推导式由包含一个表达式的中括号组成，表达式后面跟随一个for子句，之后可以有零或多个for或if子句。结果是一个列表，由表达式依据后面的for和if子句上下文计算而来的结果构成。
+
+
+
+# 集合
+集合（set）是一个无序不重复元素的集
+
+
+# 在遍历列表（或任何序列类型）的同时获得元素索引值
+enumerate()
+
+
+# 需要同时遍历两个序列类型的话
+zip()
+
+
+
+#字符串操作
+.title(
+.upper()
+.lower()
+.swapcase()    # 返回字符串的大小写交换后的版本
+.isalnum()  # 检查所有字符是否只有字母和数字，返回布尔值
+.isalpha()
+.isdigit()
+.islower()
+.istitle()
+.isupper()
+
+.split()  # 分割任意字符串，默认使用 " "，返回一个包含所有分割后的字符串的列表
+.join()  # 使用指定字符链接多个字符串，形如  " ".join(['a', 'n', 'd'])
+
+
+#字符串剥离
+.strip()  # 用来剥离字符串首尾中的指定字符，默认剥离首尾的空格和换行符
+.lstrip() # 一直删除到原字符串的最左侧不 in 参数
+.rstrip()
+
+
+# 文本搜索
+.find()  # 帮你找到第一个匹配的子字符串，没有找到则返回-1
+.startswith()
+.endswith()
+
+
+#把字符串倒序处理
+s[::-1]  #也可以应用在列表上
+
+
+==========================================
+
+函数
+
+
+# 局域或全局变量
+在函数里会创建局部变量，这个变量只在函数里可用，并且会在函数完成时销毁（并不会影响同名的全局变量）
+
+关键字 golbal
+实际上是告诉在函数内的是全局变量
+
+
+默认函数值
+函数的参数变量可以有默认值，也就说如果我们对指定的参数变量没有给出任何值则会赋予其默认值
+	第一个具有默认值的参数后面不能再有普通参数
+	默认值只被赋值一次，因此如果默认值是可变对象时会有所不同
+
+
+关键字参数
+
+强制关键字参数
+def hello(*, name='User'):
+用户调用函数时只能对每一个参数使用相应的关键字参数
+
+
+文档字符串
+.__doc__
+
+
+
+==========================================
+
+with语句
+在实际情况中，我们应该尝试使用with语句处理文件对象
+它会在文件用完后自动关闭，就算发生异常也没关系
+
+# 打开并读取文件里的字符串
+with open('/tmp/String.txt') as f:
+    s = f.read()
+res = ""
+
+# 循环字符串里的每个字符，判断是否为数字
+for char in s:
+    if char.isdigit():
+        res += char
+print(res)
+
+============================================
+
+import sys
+
+# 转换函数
+def Hours(minute):
+    # 如果为负数则 raise 异常
+    if minute < 0:
+        raise ValueError("Input number cannot be negative")
+    else:
+        print("{} H, {} M".format(int(minute / 60), minute % 60))
+
+# 函数调用及异常处理逻辑
+try:
+    Hours(int(sys.argv[1]))
+except:
+    print("Parameter Error")
+
+============================================
+
+
+你可能想要更精确的调整控制属性访问权限，你可以使用 @property 装饰器，@property 装饰器就是负责把一个方法变成属性调用的。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

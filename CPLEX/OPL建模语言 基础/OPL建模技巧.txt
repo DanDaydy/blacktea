@@ -1,0 +1,627 @@
+
+1.建模技巧
+
+有若干城市，两两相通。有若干产品。每个城市出产一些产品，同时需要一些产品。假定总的产品出产和需要相等。货运城市运输量给定。不同产品从不同城市到另一个城市的运输费用可能不同。问题是如何确定运输方案，使得总运输费用最小。
+
+城市集合   Cities
+产品集合   Porducts
+
+(每个)城市的运输能力  capacity
+
+城市出产产品数量    supply[产品][城市]
+城市需要产品数量   demand[产品][城市]
+
+
+假定总的产品出产和需要相等
+assert forall(p in Products) 
+	sum(o in Cities) 	supply[p][o] == sum(d in Cities) demand[p][d]; 
+
+定义不同产品从不同城市到另一个城市的运输费用数组：
+float cost[Products][Cities][Cities] = ...; 
+
+
+定义决策变量，即不同产品从不同城市到另一个城市的运输量：
+dvar float+ trans[Products][Cities][Cities]; 
+
+目标是总的运输费用最小，即：
+minimize sum(p in Products, o,d in Cities) cost[p][o][d] * trans[p][o][d]; 
+
+
+对于某个城市的某个产品的出产而言，可能被分送到若干其它城市，但总量一定和出产量相等，即：
+forall(p in Products, o in Cities) 
+	sum(d in Cities) trans[p][o][d] == supply[p][o]; 
+
+
+--------------------------------------
+
+模型
+
+//城市集合，产品集合，运输能力
+{string} Cities =...;
+{string} Products = ...;
+float capacity = ...;
+
+//城市的每种产品的生产量，需求量
+float supply[Products][Cities] = ...;
+float demand[Products][Cities] = ...;
+
+//检查一下，所有城市的每种产品的总产量 =  总需求量
+assert
+   forall(p in Products)
+      sum(o in Cities) supply[p][o] == sum(d in Cities) demand[p][d];
+
+//一个城市到另一个城市的不同产品的运输费用
+float cost[Products][Cities][Cities] = ...;
+
+//决策变量，一个城市到另一个城市运输某种产品的数量
+dvar float+ trans[Products][Cities][Cities];
+
+//constraint naming. 
+constraint ct1;
+constraint ct2;
+constraint ct3;
+
+//目标函数，城市之间运输所有产品的总花费
+minimize
+   sum(p in Products, o,d in Cities) cost[p][o][d] * trans[p][o][d];
+
+subject to {
+//对于一个城市来说，每种产品的生产量 == 运输到所有城市（包括自身）的量
+//生产的全都运出去（包括运给自己）
+ct1=   forall(p in Products, o in Cities) 
+         sum(d in Cities) trans[p][o][d] == supply[p][o];
+
+//对于一个城市来说，每种产品的需求量 ==  所有城市（包括自身）往它这里运的数量
+//需求量都得到满足
+ct2=   forall(p in Products, d in Cities) 
+         sum(o in Cities) trans[p][o][d] == demand[p][d];
+
+//总运力约束
+ct3=   forall(o, d in Cities)
+         sum(p in Products) trans[p][o][d] <= capacity;
+}  
+
+---------------------------------------------
+
+2.数组定义
+使用多维数组时，数组index的次序会影响到程序的效率。例如
+
+range r1 = 1..n1;
+range r2 = 1..n2;
+
+dvar int+ x[r1][r2];
+
+a1 == sum(i in r1, j in r2) x[i][j];
+a2 == sum(j in r2, i in r1) x[i][j];
+
+因为OPL缓存机制的原因， a2的效率比a1高
+
+------------------------------------------------
+
+3.数组初始化
+
+range r=1..2;
+int values1[r][r];
+execute exec_values1 {
+   for (i in r)
+   {
+      for (j in r)
+           if (i == 2*j) 
+                   values1[i][j] = i+j;
+   }
+    writeln(values1);                         
+}
+
+//i 如果等于 2*j  ，则  values2[i][j] =  i + j  ; 否则为0
+int values2[i in r][j in r] = (i==2*j) ? i+j : 0;
+execute exec_values2 {
+writeln(values2);
+}
+
+values2的效率比values1高
+
+-------------------------------------------------
+
+4、Generic arrays
+
+应该尽量使用generic arrays（数组成员由一个表达式初始化）
+
+例如：
+: 
+int a[i in 1..10] = i+1; 
+a[i]的值为 i+1. 
+
+int m[i in 0..10][j in 0..10] = 10*i + j; 
+m[i][j] 的值是 10*i + j. 
+
+int m[Dim1][Dim2] = ...; 
+int t[j in Dim2][i in Dim1] = m[i][j]; 
+利用一个现有数组进行初始化
+
+
+5、其它杂项
+
+变量命名遵循匈牙利命名规则；
+尽量给约束起一个有意义的名字；
+尽量多写注释语句；
+注意语句的缩进；
+
+
+
+
+
+
+
+
+
+
+-----------------------------------------
+数据文件：
+
+Cities = { GARY CLEV PITT FRA  DET  LAN  WIN  STL  FRE  LAF };
+Products   = { bands coils plate };
+capacity    = 625;
+
+supply = #[
+     bands: #[
+         GARY: 400
+                   CLEV: 700
+                   PITT: 800
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+       coils: #[
+         GARY: 800
+                   CLEV: 1600
+                   PITT: 1800
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+       plate: #[
+         GARY: 200
+                   CLEV: 300
+                   PITT: 300
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+]#;
+
+
+demand = #[
+     bands: #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 300
+                   DET: 300
+                   LAN: 100
+                   WIN: 75
+                   STL: 650
+                   FRE: 225
+                   LAF: 250
+                 ]#
+       coils: #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 500
+                   DET: 750
+                   LAN: 400
+                   WIN: 250
+                   STL: 950
+                   FRE: 850
+                   LAF: 500
+                 ]#
+       plate: #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 100
+                   DET: 100
+                   LAN: 0
+                   WIN: 50
+                   STL: 200
+                   FRE: 100
+                   LAF: 250
+                 ]#
+]#;
+
+cost = #[
+   bands: #[
+     GARY:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 30
+                   DET: 10
+                   LAN: 8
+                   WIN: 10
+                   STL: 11
+                   FRE: 71
+                   LAF: 6
+                 ]#
+     CLEV:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 22
+                   DET: 7
+                   LAN: 10
+                   WIN: 7
+                   STL: 21
+                   FRE: 82
+                   LAF: 13
+                 ]#
+     PITT:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 19
+                   DET: 11
+                   LAN: 12
+                   WIN: 10
+                   STL: 25
+                   FRE: 83
+                   LAF: 15
+                 ]#
+     FRA:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     DET:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     LAN:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     WIN:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     STL:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+       FRE:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+       LAF:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+        ]#
+
+   coils: #[
+     GARY:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 39
+                   DET: 14
+                   LAN: 11
+                   WIN: 14
+                   STL: 16
+                   FRE: 82
+                   LAF: 8
+                 ]#
+     CLEV:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 27
+                   DET: 9
+                   LAN: 12
+                   WIN: 9
+                   STL: 26
+                   FRE: 95
+                   LAF: 17
+                 ]#
+     PITT:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 24
+                   DET: 14
+                   LAN: 17
+                   WIN: 13
+                   STL: 28
+                   FRE: 99
+                   LAF: 20
+                 ]#
+     FRA:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     DET:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     LAN:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     WIN:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     STL:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+       FRE:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+       LAF:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+        ]#
+
+   plate: #[
+     GARY:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 41
+                   DET: 15
+                   LAN: 12
+                   WIN: 16
+                   STL: 17
+                   FRE: 86
+                   LAF: 8
+                 ]#
+     CLEV:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 29
+                   DET: 9
+                   LAN: 13
+                   WIN: 9
+                   STL: 28
+                   FRE: 99
+                   LAF: 18
+                 ]#
+     PITT:  #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 26
+                   DET: 14
+                   LAN: 17
+                   WIN: 13
+                   STL: 31
+                   FRE: 104
+                   LAF: 20
+                 ]#
+     FRA:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     DET:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     LAN:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     WIN:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+     STL:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+       FRE:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+       LAF:   #[
+         GARY: 0
+                   CLEV: 0
+                   PITT: 0
+                   FRA: 0
+                   DET: 0
+                   LAN: 0
+                   WIN: 0
+                   STL: 0
+                   FRE: 0
+                   LAF: 0
+                 ]#
+        ]#
+
+]#;
+
+
+
+
+
+
+
+
+
+
+
+
+

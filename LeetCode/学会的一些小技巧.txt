@@ -1,0 +1,74 @@
+0.一个列表，按照两个key值进行排序
+people = [[7,0], [4,4], [7,1], [5,0], [6,1], [5,2]]
+
+people.sort(key = lambda x:(-x[0],x[1]))
+
+
+1.列表插入函数 insert()
+list.insert(index, obj)
+
+    index -- 对象 obj 需要插入的索引位置。
+    obj -- 要插入列表中的对象。
+
+
+2.为字典提供默认值collections.defaultdict()
+need=collections.defaultdict(int)
+以int为例，这时候如果need['a']，则会返回默认值0
+
+
+3.find()
+find() 方法检测字符串中是否包含子字符串 str ，如果指定 beg（开始） 和 end（结束） 范围，则检查是否包含在指定范围内，如果包含子字符串返回开始的索引值，否则返回-1。
+str.find(str, beg=0, end=len(string))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,56 @@
+
+ortools系列：运筹优化工具google ortools简介
+https://zhuanlan.zhihu.com/p/55089642
+
+
+运筹优化求解器：比较有名的有IBM ILOG Cplex,Gurobi,FICO Xpress,MOSEK等，也有一些专门针对具体领域定制的求解器。
+
+
+OR-Tools是一个用于优化的开源软件套件，用于解决车辆路径、流程、整数和线性规划以及约束编程等世界上最棘手的问题。
+同时OR-Tools提供了C++,Python,Java,.NET的接口，同时提供统一接口封装来调用商业求解器如Gurobi, CPLEX等，也包括开源求解器如SCIP, GLPK, ortools等。
+
+------------------------------
+营养问题
+
+有76中食物 food_i，每种食物单位重量或体积包含 j 中营养物质 nutrients_ij，每种食物的价格是 price_i，每年需要的各项营养物质的总量是 need_j .
+求：如何搭配食物，既能满足营养成分的需求，又能花最少的钱。
+
+假设每样食物需求量是 w_i
+
+\min   w_i   \times  price_i
+
+s.t.    \sum_{i = 1}^{n}w_i \times nutrients_ij  \ge need_j    \forall j
+        w_i \ge 0
+
+-------
+
+各种食物的数据：
+data = [
+        ['Wheat Flour (Enriched)', '10 lb.', 36, 44.7, 1411, 2, 365, 0, 55.4, 33.3, 441, 0],
+        ['Macaroni', '1 lb.', 14.1, 11.6, 418, 0.7, 54, 0, 3.2, 1.9, 68, 0],
+        ['Wheat Cereal (Enriched)', '28 oz.', 24.2, 11.8, 377, 14.4, 175, 0, 14.4, 8.8, 114, 0],
+...         ]
+
+
+需要的各种营养素最小需求量
+
+nutrients = [
+        ['Calories (1000s)', 3],
+        ['Protein (grams)', 70],
+        ['Calcium (grams)', 0.8],
+        ['Iron (mg)', 12],
+        ['Vitamin A (1000 IU)', 5],
+        ['Vitamin B1 (mg)', 1.8],
+        ['Vitamin B2 (mg)', 2.7],
+        ['Niacin (mg)', 18],
+        ['Vitamin C (mg)', 75]]
+
+
+定义food：
+food = [[]] * len(data)   初始化food
+for i in range(0,len(data)):
+	food[i] = data[i][0]
+
+
+
+

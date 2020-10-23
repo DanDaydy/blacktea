@@ -1,0 +1,389 @@
+https://github.com/IBMDecisionOptimization/docplex-examples/blob/master/examples/cp/jupyter/scheduling_tuto.ipynb
+
+Chapter 1. Introduction to Scheduling
+
+
+Scheduling building blocks
+
+Scheduling是creating a schedule的动作，这是计划发生的时间表。 计划还可能涉及随着时间的流逝向活动分配资源。
+
+调度问题可以视为约束满足问题或约束优化问题。 无论如何看待，调度问题都由以下方式定义：
+
+     一组时间间隔，用于定义要完成的活动，操作或任务
+     一组时间约束，用于定义间隔的开始时间和结束时间之间的可能关系
+     一组特殊的约束，用于根据资源的状态和有限的容量在一组间隔上指定复杂的关系。
+
+
+=========================================================
+import sys
+from docplex.cp.model import *
+
+
+mdl0 = CpoModel()
+
+此代码创建一个CP模型容器，该容器允许使用特定于constraint programming或Scheduling的约束。
+
+
+
+------>决策变量的声明
+
+变量声明定义模型中每个变量的类型。 
+例如，要创建一个变量，该变量等于从位置i到位置j运送的物料量，可以如下创建一个名为ship的变量：
+ship = [[integer_var(min=0) for j in range(N)] for i in range(N)]
+
+此代码声明非负整数决策变量的array（list of lists in Python）； ship [i] [j]是决策变量，用于处理从位置i到位置j的物料运输量。
+
+对于scheduling，还有特定的其他决策变量，即：
+
+    interval variables           
+    sequence variables.       序列变量
+
+活动，操作和任务表示为interval decision variables
+
+An interval has a start, a end, a length, and a size. 
+间隔具有开始，结束，长度和大小。 间隔变量允许这些值在模型中可变。 起点是区间的下端点，终点是区间的上端点。 默认情况下，大小等于长度，即长度的开始和结束之间的差。 通常，大小是长度的下限。
+
+
+The following example contains a dictionary of interval decision variables where the sizes of the interval variables are fixed and the keys are 2 dimensional: 
+
+一个 interval decision variables的字典，size是固定的，keys是二维的（指的是h,t）
+itvs = {(h,t) : mdl.interval_var(size = Duration[t]) for h in Houses for t in TaskNames}
+
+
+------>目标函数
+
+For example:
+   mdl.add(mdl.minimize(mdl.endOf(tasks["moving"])))
+间隔变量task [“ moving”]的结尾需要最小化。
+
+
+------>约束
+可以在区间变量上放置几种类型的约束：
+     优先约束，它确保区间在解决方案中的相对位置（例如，优先约束可以模拟一个要求，即区间a必须在区间b开始之前结束，并且可以选择具有一些最小延迟z）
+     无重叠约束，可确保时间间隔在解决方案中不分离；
+     跨度约束，可确保一个间隔覆盖一组间隔中的那些间隔；
+     替代约束，确保解决方案中确实存在一组间隔；
+     同步约束，以确保一组间隔与给定间隔变量（如果在解决方案中存在）同时开始和结束；
+     累积表达式约束，它限制了累积表达式域的边界。
+
+
+
+-----------------------------------------------------------------
+
+例子
+问题是房屋建筑问题。 固定大小的任务有十个，每个任务都需要分配一个开始时间。
+
+#这里说的就很明白了
+
+The statements for creating the interval variables that represent the tasks are:
+
+#定义区间变量
+masonry = mdl0.interval_var(size=35)
+carpentry = mdl0.interval_var(size=15)
+plumbing = mdl0.interval_var(size=40)
+ceiling = mdl0.interval_var(size=15)
+roofing = mdl0.interval_var(size=5)
+painting = mdl0.interval_var(size=10)
+windows = mdl0.interval_var(size=5)
+facade = mdl0.interval_var(size=10)
+garden = mdl0.interval_var(size=5)
+moving = mdl0.interval_var(size=5)
+
+
+这个问题的约束是优先约束； 有些任务只有在其他任务结束后才能开始。 例如，必须先完成天花板才能开始绘画。
+#约束条件
+
+mdl0.add( mdl0.end_before_start(masonry, carpentry) )
+mdl0.add( mdl0.end_before_start(masonry, plumbing) )
+mdl0.add( mdl0.end_before_start(masonry, ceiling) )
+mdl0.add( mdl0.end_before_start(carpentry, roofing) )
+mdl0.add( mdl0.end_before_start(ceiling, painting) )
+mdl0.add( mdl0.end_before_start(roofing, windows) )
+mdl0.add( mdl0.end_before_start(roofing, facade) )
+mdl0.add( mdl0.end_before_start(plumbing, facade) )
+mdl0.add( mdl0.end_before_start(roofing, garden) )
+mdl0.add( mdl0.end_before_start(plumbing, garden) )
+mdl0.add( mdl0.end_before_start(windows, moving) )
+mdl0.add( mdl0.end_before_start(facade, moving) )
+mdl0.add( mdl0.end_before_start(garden, moving) )
+mdl0.add( mdl0.end_before_start(painting, moving) )
+
+在这里，特殊约束end_before_start（）确保一个区间变量在另一个开始之前结束。 如果不存在间隔变量之一，则自动满足约束条件。
+#前面的任务在后面的任务开始之前结束
+
+
+# Solve the model
+print("\nSolving model....")
+msol0 = mdl0.solve(TimeLimit=10)
+print("done")
+
+
+显示解决方案
+if msol0:
+    var_sol = msol0.get_var_solution(masonry)
+    print("Masonry : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol0.get_var_solution(carpentry)
+    print("Carpentry : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol0.get_var_solution(plumbing)
+    print("Plumbing : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol0.get_var_solution(ceiling)
+    print("Ceiling : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol0.get_var_solution(roofing)
+    print("Roofing : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol0.get_var_solution(painting)
+    print("Painting : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol0.get_var_solution(windows)
+    print("Windows : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol0.get_var_solution(facade)
+    print("Facade : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol0.get_var_solution(moving)
+    print("Moving : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+else:
+    print("No solution found")
+
+
+这些任务的图形视图可通过以下附加代码获得：
+
+import docplex.cp.utils_visu as visu
+import matplotlib.pyplot as plt
+%matplotlib inline
+#Change the plot size
+from pylab import rcParams
+rcParams['figure.figsize'] = 15, 3
+
+
+if msol0:
+    wt = msol0.get_var_solution(masonry)   
+    visu.interval(wt, 'lightblue', 'masonry')   
+    wt = msol0.get_var_solution(carpentry)   
+    visu.interval(wt, 'lightblue', 'carpentry')
+    wt = msol0.get_var_solution(plumbing)   
+    visu.interval(wt, 'lightblue', 'plumbing')
+    wt = msol0.get_var_solution(ceiling)   
+    visu.interval(wt, 'lightblue', 'ceiling')
+    wt = msol0.get_var_solution(roofing)   
+    visu.interval(wt, 'lightblue', 'roofing')
+    wt = msol0.get_var_solution(painting)   
+    visu.interval(wt, 'lightblue', 'painting')
+    wt = msol0.get_var_solution(windows)   
+    visu.interval(wt, 'lightblue', 'windows')
+    wt = msol0.get_var_solution(facade)   
+    visu.interval(wt, 'lightblue', 'facade')
+    wt = msol0.get_var_solution(moving)   
+    visu.interval(wt, 'lightblue', 'moving')
+    visu.show()
+
+
+在为时间间隔分配了一个开始值（例如s）和一个结束值（例如e）之后，该时间间隔被写为[s，e）。 时间间隔不包括端点e。 如果将另一个时间间隔变量限制为在此时间间隔之后放置，则它可以在时间e开始。
+
+
+=======================================================
+Chapter 2. Modeling and solving house building with an objective
+本章以最小化目标的方式介绍了同一房屋建筑示例。
+
+It intends to present how to:
+    use the interval variable,
+    use the constraint endBeforeStart,
+    use the expressions startOf and endOf.
+
+这里最小化的目的是与在优选的最早开始日期之前或优选的最后结束日期之前执行特定任务相关的成本。 有些任务必须在其他任务之前发生，并且每个任务都有给定的持续时间。
+
+为了找到该问题的解决方案，使用了一种三阶段方法：描述，建模和求解。
+
+
+Problem to be solved
+
+问题包括以某种方式为任务分配开始日期，以使结果计划表满足优先约束并最小化标准。 此问题的标准是使与在给定日期之前开始某些任务相关的早期成本和与在给定日期之后完成某些任务相关的拖延成本最小化。
+
+对于房屋建筑项目中的每个任务，下表显示了任务的持续时间（以天为单位）以及必须开始才能完成的任务。
+
+Task 	Duration 	Preceding tasks
+masonry 	35 	
+carpentry 15 	masonry
+plumbing 40 	masonry
+ceiling 	15 	masonry
+roofing 	5 	carpentry
+painting 	10 	ceiling
+windows 	5 	roofing
+facade 	10 	roofing, plumbing
+garden 	5 	roofing, plumbing
+moving 	5 	windows, facade, garden, painting
+
+该问题的其他信息包括与某些任务相关的the earliness and tardiness costs 。
+
+Task 	Preferred earliest start date 	Cost per day for starting early
+masonry 	25 			200.0
+carpentry 75 			300.0
+ceiling 	75 			100.0
+
+Task 	Preferred latest end date 	Cost per day for ending late
+moving 	100 			400.0
+
+
+
+
+------>Step 1: Describe the problem
+对问题建模的第一步是编写问题的自然语言描述，确定决策变量和这些变量的约束。
+
+     这个问题中已知的信息是什么？
+     这个问题中的决策变量或未知数是什么？
+     这些变量有哪些约束条件？
+     目的是什么？
+
+
+房屋建造有10个任务，每个任务都有给定的持续时间，
+对于每一个任务来说，都有在其开始之前必须结束的任务（紧前工序），
+某些任务还有给定的开始时间或结束时间，早于开始时间或者晚于结束时间要付出相应成本。
+
+决策变量就是每个任务的开始时间，费用（可以理解为多出来的费用）由决策变量决定
+
+每个约束条件都说明特定任务可能要等到一个或多个给定任务完成后才能开始。
+
+目的是最大程度地减少因提早和延误而产生的成本。
+
+
+------>Step 2: Declare the interval variables
+
+在模型中，每个任务由一个区间变量表示。 每个变量代表未知信息，即每个活动的计划时间间隔。 执行模型后，分配给这些间隔变量的值将代表问题的解决方案。
+
+import sys
+from docplex.cp.model import *
+
+mdl1 = CpoModel()
+
+masonry = mdl1.interval_var(size=35)
+carpentry = mdl1.interval_var(size=15)
+plumbing = mdl1.interval_var(size=40)
+ceiling = mdl1.interval_var(size=15)
+roofing = mdl1.interval_var(size=5)
+painting = mdl1.interval_var(size=10)
+windows = mdl1.interval_var(size=5)
+facade = mdl1.interval_var(size=10)
+garden = mdl1.interval_var(size=5)
+moving = mdl1.interval_var(size=5)
+
+------>Step 3: Add the precedence constraints
+优先约束
+在此示例中，某些任务只能在其他任务完成后才能开始。 CP Optimizer允许使用优先约束来表达涉及间隔变量对之间的时间关系的约束。
+
+优先约束用于指定间隔变量相对于另一个间隔变量的开始或结束时间何时必须开始或结束。
+
+可以使用以下类型的优先级约束； 如果a和b表示间隔变量，both interval variables are present，并且delay是一个数字或整数表达式（默认为0），则：
+
+---------------------------------------
+    end_before_end(a, b, delay) constrains at least the given delay to elapse between the end of a and the end of b. It imposes the inequality 
+endTime(a) + delay <= endTime(b).
+#a在b结束之前结束
+
+    end_before_start(a, b, delay) constrains at least the given delay to elapse between the end of a and the start of b. It imposes the inequality endTime(a) + delay <= startTime(b).
+    end_at_end(a, b, delay) constrains the given delay to separate the end of a and the end of ab. It imposes the equality endTime(a) + delay == endTime(b).
+#a在b结束的时候结束
+
+    end_at_start(a, b, delay) constrains the given delay to separate the end of a and the start of b. It imposes the equality endTime(a) + delay == startTime(b).
+    start_before_end(a, b, delay) constrains at least the given delay to elapse between the start of a and the end of b. It imposes the inequality startTime(a) + delay <= endTime(b).
+    start_before_start(a, b, delay) constrains at least the given delay to elapse between the start of act1 and the start of act2. It imposes the inequality startTime(a) + delay <= startTime(b).
+    start_at_end(a, b, delay) constrains the given delay to separate the start of a and the end of b. It imposes the equality startTime(a) + delay == endTime(b).
+    start_at_start(a, b, delay) constrains the given delay to separate the start of a and the start of b. It imposes the equality startTime(a) + delay == startTime(b).
+-----------------------------------------
+
+For our model, precedence constraints can be added with the following code:
+
+mdl1.add( mdl1.end_before_start(masonry, carpentry) )
+mdl1.add( mdl1.end_before_start(masonry, plumbing) )
+mdl1.add( mdl1.end_before_start(masonry, ceiling) )
+mdl1.add( mdl1.end_before_start(carpentry, roofing) )
+mdl1.add( mdl1.end_before_start(ceiling, painting) )
+mdl1.add( mdl1.end_before_start(roofing, windows) )
+mdl1.add( mdl1.end_before_start(roofing, facade) )
+mdl1.add( mdl1.end_before_start(plumbing, facade) )
+mdl1.add( mdl1.end_before_start(roofing, garden) )
+mdl1.add( mdl1.end_before_start(plumbing, garden) )
+mdl1.add( mdl1.end_before_start(windows, moving) )
+mdl1.add( mdl1.end_before_start(facade, moving) )
+mdl1.add( mdl1.end_before_start(garden, moving) )
+mdl1.add( mdl1.end_before_start(painting, moving) )
+
+
+
+为了对早于首选开始日期的任务成本进行建模，可以使用表达式start_of（）。 它以整数表达式表示间隔变量的开始。
+
+对于每个具有最早的首选开始日期的任务，可以使用表达式start_of（）确定预定的首选日期开始的天数。 如果任务在首选日期之后开始，则此表达式可以为负。 使用max（）将此值取最大值和0可以确定计划将任务提前多少天开始。 将此值与提早开始的每日费用加权，即可确定与任务相关的费用。
+
+使用表达式endOf（）以类似的方式对在首选日期之后结束任务的成本进行了建模。 可以将早期成本和迟到成本相加以确定总成本。
+
+------>Step 4: Add the objective
+
+                        #     max(       0和     movling的结束日期 -  预定的结束日期(100）  )
+obj = mdl1.minimize(  400 * mdl1.max([mdl1.end_of(moving) - 100, 0]) 
+                    + 200 * mdl1.max([25 - mdl1.start_of(masonry), 0]) 
+                    + 300 * mdl1.max([75 - mdl1.start_of(carpentry), 0]) 
+                    + 100 * mdl1.max([75 - mdl1.start_of(ceiling), 0]) )
+mdl1.add(obj)
+
+
+------>Step 5: Solve the model and display the solution
+
+# Solve the model
+print("\nSolving model....")
+msol1 = mdl1.solve(TimeLimit=20)
+print("done")
+
+In [ ]:
+
+if msol1:
+    print("Cost will be " + str(msol1.get_objective_values()[0]))
+    
+    var_sol = msol1.get_var_solution(masonry)
+    print("Masonry : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol1.get_var_solution(carpentry)
+    print("Carpentry : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol1.get_var_solution(plumbing)
+    print("Plumbing : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol1.get_var_solution(ceiling)
+    print("Ceiling : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol1.get_var_solution(roofing)
+    print("Roofing : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol1.get_var_solution(painting)
+    print("Painting : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol1.get_var_solution(windows)
+    print("Windows : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol1.get_var_solution(facade)
+    print("Facade : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+    var_sol = msol1.get_var_solution(moving)
+    print("Moving : {}..{}".format(var_sol.get_start(), var_sol.get_end()))
+else:
+    print("No solution found")
+
+Graphical display of the same result is available with:
+In [ ]:
+
+import docplex.cp.utils_visu as visu
+import matplotlib.pyplot as plt
+%matplotlib inline
+#Change the plot size
+from pylab import rcParams
+rcParams['figure.figsize'] = 15, 3
+
+In [ ]:
+
+if msol1:
+    wt = msol1.get_var_solution(masonry)   
+    visu.interval(wt, 'lightblue', 'masonry')   
+    wt = msol1.get_var_solution(carpentry)   
+    visu.interval(wt, 'lightblue', 'carpentry')
+    wt = msol1.get_var_solution(plumbing)   
+    visu.interval(wt, 'lightblue', 'plumbing')
+    wt = msol1.get_var_solution(ceiling)   
+    visu.interval(wt, 'lightblue', 'ceiling')
+    wt = msol1.get_var_solution(roofing)   
+    visu.interval(wt, 'lightblue', 'roofing')
+    wt = msol1.get_var_solution(painting)   
+    visu.interval(wt, 'lightblue', 'painting')
+    wt = msol1.get_var_solution(windows)   
+    visu.interval(wt, 'lightblue', 'windows')
+    wt = msol1.get_var_solution(facade)   
+    visu.interval(wt, 'lightblue', 'facade')
+    wt = msol1.get_var_solution(moving)   
+    visu.interval(wt, 'lightblue', 'moving')
+    visu.show()
+

@@ -1,0 +1,279 @@
+首先来总结一下前面的两章。
+第一章
+要建一座房子，房子有固定的十个工序/任务，每个任务有固定的时间
+有的任务有紧前工序（该任务要在某些任务结束之后才能开始）
+决策变量就是给每个任务分配一个  开始时间
+
+
+第二章加了目标，实际上第一章的目标就是默认使所有任务最快完成
+这里说有一些任务有偏好的最早开始日期，如果比这个时间更早开始，则会付出额外成本
+有的任务有偏好的最晚结束日期，如果比这个时间晚结束，会付出滞期成本
+目标就是使产生的这些成本最小化。
+
+官方的说：
+1.房屋建造有10个任务，每个任务都有给定的持续时间
+2.对于每一个任务来说，都有在其开始之前必须结束的任务（紧前工序）
+3.某些任务还有给定的开始时间或结束时间，早于开始时间或者晚于结束时间要付出相应成本
+4.决策变量就是每个任务的开始时间，费用（可以理解为多出来的费用）由决策变量决定
+5.每个约束条件都说明特定任务可能要等到一个或多个给定任务完成后才能开始
+6.目的是最大程度地减少因提早和延误而产生的成本
+
+
+=====================================
+
+看了好几遍之后
+我现在来复述一下怎么解决的这个问题
+
+定义每所房屋的区间变量（只给出了开始时间的取值范围）
+定义每所房屋每个任务的区间变量（size是固定的）
+（所以求解的就是每个任务的开始时间，它们也会决定每所房屋的开始和结束时间）
+
+约束：
+每所房屋的任务的优先级约束
+通过下面两个定义来写   不重叠矩阵（工人的任务序列里的任务区间不重叠且加上转移时间）
+        定义工人的任务序列
+        定义房屋之间的转移时间矩阵
+跨度约束，房屋的区间变量要包含其所有任务的区间变量
+
+目标函数
+
+
+=================
+
+第三章的情况更复杂
+（学习曲线一下陡峭了呢）
+
+1.要建5所一样的房屋，每个房屋都是有10个任务
+2.对于每一个任务来说，都有在其开始之前必须结束的任务（紧前工序）
+3.每种类型的任务都必须由特定的工人来执行，工人一次只能执行一项任务，开始了就不能中断
+4.工人从一所房屋转移到另一所房屋所需的时间由两所房屋之间的位置决定
+5.每所房屋都有最早开始的日期，最晚结束的时间，晚于这个时间之后每天要付出滞期成本
+6.决策变量就是确定每间房屋每个任务的开始日期
+7.约束条件
+8.目标函数使延迟成本和工时成本最小化
+
+
+
+Chapter 3. Adding workers and transition times to the house building problem
+
+    use the interval variable sequence;
+    use the constraints span and no_overlap;
+    use the expression length_of.
+
+区间变量序列
+跨度约束    和   不重叠约束
+（某个区间变量）的长度
+
+
+
+
+要解决的问题是以多种方式建造多个房屋所涉及的任务的计划，以最大程度地减少与在给定到期日期后完成每个房屋相关的成本以及建造每个房屋所花费的时间。 有些任务必须在其他任务之前发生，并且每个任务都有预定义的持续时间。 每个房子都有最早的开始日期。 而且，有两个工人，每个工人必须执行必要任务的给定子集，并且存在与工人从一所房屋转移到另一所房屋相关的过渡时间。 任务一旦启动，就不能中断。
+
+目的是使成本最小化，该成本由用于某些任务的拖延成本以及与完成每所房屋所花费的时间长度相关的成本组成。
+
+
+Problem to be solved
+
+The problem consists of assigning start dates to a set of tasks in such a way that the schedule satisfies temporal constraints and minimizes a criterion. The criterion for this problem is to minimize the tardiness costs associated with completing each house later than its specified due date and the cost associated with the length of time it takes to complete each house.
+
+#任务必须由特定工人来完成
+
+ask 	Duration 	Worker 	Preceding tasks
+masonry 	35 	Joe 	
+carpentry 15 	Joe 	masonry
+plumbing 40 	Jim 	masonry
+ceiling 	15 	Jim 	masonry
+roofing 	5 	Joe 	carpentry
+painting 	10 	Jim 	ceiling
+windows 	5 	Jim 	roofing
+facade 	10 	Joe 	roofing, plumbing
+garden 	5 	Joe 	roofing, plumbing
+moving 	5 	Jim 	windows, facade,garden, painting
+
+#每个房子的最早开始日期，期望的结束日期，晚于期望之后每天的惩罚成本
+House 	Earliest start date 	Preferred latest end date 	Cost per day for ending late
+0 	0 		120 			100.0
+1 	0 		212 			100.0
+2 	151 		304 			100.0
+3 	59 		181 			200.0
+4 	243 		425 			100.0
+
+解决问题包括确定任务的开始日期，以使成本（其中成本由延迟成本和工时成本决定）被最小化。
+
+------>Step 1: Describe the problem
+
+两名工人要建造五栋房屋。 对于每个房屋，有十个房屋建筑任务，每个任务都有给定的持续时间或大小。 每个房屋都有指定的最早开始日期。 对于每个任务，都有一个必须启动的任务列表。 每个任务必须由给定的工人执行，并且存在与工人从一所房屋转移到另一所房屋相关的过渡时间。 在每间房屋的首选到期日后完成其费用以及完成每间房屋所花费的时间会产生成本。
+
+未知数是与任务关联的间隔变量的开始和结束日期。 一旦确定，这些间隔变量也将确定解决方案的成本。 对于某些时间间隔变量，有一个固定的最小开始日期。
+
+有一些约束条件指定特定任务可能要等到一个或多个给定任务完成后才能开始。 另外，存在一些约束条件，这些约束条件指定一次只能将一个工人分配给一个任务，并且一个工人从一所房子搬到另一所房子要花一些时间。
+
+目的是最大程度地减少因拖延和长度成本而产生的成本。
+
+
+------>Step2: Prepare data
+
+NbHouses = 5
+
+WorkerNames = ["Joe", "Jim"]
+
+TaskNames = ["masonry", "carpentry", "plumbing", 
+             "ceiling", "roofing", "painting", 
+             "windows", "facade", "garden", "moving"]
+
+Duration =  [35, 15, 40, 15, 5, 10, 5, 10, 5, 5]
+
+Worker = {"masonry"  : "Joe" , 
+          "carpentry": "Joe" , 
+          "plumbing" : "Jim" , 
+          "ceiling"  : "Jim" , 
+          "roofing"  : "Joe" , 
+          "painting" : "Jim" , 
+          "windows"  : "Jim" , 
+          "facade"   : "Joe" , 
+          "garden"   : "Joe" , 
+          "moving"   : "Jim"}
+
+ReleaseDate = [  0,     0,   151,    59,   243]
+DueDate     = [120,   212,   304,   181,   425]
+Weight      = [100.0, 100.0, 100.0, 200.0, 100.0]
+
+Precedences = [("masonry", "carpentry"),("masonry", "plumbing"),
+               ("masonry", "ceiling"), ("carpentry", "roofing"),
+               ("ceiling", "painting"), ("roofing", "windows"),  
+               ("roofing", "facade"), ("plumbing", "facade"),
+               ("roofing", "garden"), ("plumbing", "garden"),
+               ("windows", "moving"), ("facade", "moving"),  
+               ("garden", "moving"), ("painting", "moving")]
+
+Houses = range(NbHouses)
+
+目标的一部分是基于建造房屋所需的时间。 为了对此建模，对每个房屋使用一个间隔变量，随后将其约束为跨越与给定房屋相关联的任务。 由于每个房屋都有最早的开始日期，并且每个房屋间隔变量都声明为具有不早于该发布日期的开始日期。 任务的结束日期不受限制，因此变量范围的上限值是maxint。
+
+
+------>Step 3: Create the house interval variables
+
+import sys
+from docplex.cp.model import *
+
+mdl2 = CpoModel()
+
+houses = [mdl2.interval_var(start=(ReleaseDate[i], INTERVAL_MAX), name="house"+str(i)) for i in Houses]
+
+
+------>Step 4: Create the task interval variables
+
+每个房屋都有必须安排的任务清单。 每个任务t的持续时间或大小为Duration [t]。 该信息允许建立间隔变量的矩阵itvs。
+
+TaskNames_ids = {}
+itvs = {}
+for h in Houses:
+    for i,t in enumerate(TaskNames):
+        _name = str(h)+"_"+str(t)
+        itvs[(h,t)] = mdl2.interval_var(size=Duration[i], name=_name)
+        TaskNames_ids[_name] = i
+
+#enumerate() 函数用于将一个可遍历的数据对象(如列表、元组或字符串)组合为一个索引序列，同时列出数据和数据下标
+
+
+------>Step 5: Add the precedence constraints
+房屋建筑项目的任务具有优先级约束，该约束已添加到模型中。
+for h in Houses:
+    for p in Precedences:
+        mdl2.add(mdl2.end_before_start(itvs[(h,p[0])], itvs[(h,p[1])]) )
+
+
+为了对与建造一所房屋所花费的时间长度相关的成本进行建模，将与房屋相关联的时间间隔变量限制为在房屋的第一个任务开始时开始，在最后一个任务结束时结束。 此时间间隔变量必须跨越任务。
+
+
+------>Step 6: Add the span constraints
+
+约束范围允许指定一个区间变量必须完全覆盖一组区间变量。 换句话说，当且仅当存在至少一个跨度间隔变量时才在解决方案中存在跨度间隔，在这种情况下，跨度间隔变量始于该集合中最早调度的间隔变量的开始。 在集合中排定的最后一个时间间隔变量的结尾处结束。
+
+对于房屋h，间隔变量house [h]被约束为覆盖与给定房屋的任务相关联的itvs中的间隔变量。
+for h in Houses:
+    mdl2.add( mdl2.span(houses[h], [itvs[(h,t)] for t in TaskNames] ) )
+
+
+------>Step 7: Create the transition times
+可以使用具有三个元素的元组来建模过渡时间。 第一个元素是一个任务的间隔变量类型，第二个是另一个任务的间隔变量类型，元组的第三个元素是从第一任务到第二任务的过渡时间。 整数间隔变量类型可以与每个间隔变量关联。
+
+Given an interval variable a1 that precedes (not necessarily directly) an interval variable a2 in a sequence of non-overlapping interval variables, the transition time between a1 and a2 is an amount of time that must elapse between the end of a1 and the beginning of a2.
+
+
+transitionTimes = transition_matrix([[int(abs(i - j)) for j in Houses] for i in Houses])
+
+
+每个任务都需要一个特定的工人。 由于工人一次只能执行一项任务，因此有必要知道该工人必须执行的所有任务，然后限制这些间隔不重叠并遵守过渡时间。 序列变量表示工人执行任务的顺序。
+
+请注意，sequence变量不会强制任务不重叠或任务的顺序。 在随后的步骤中，将创建一个约束，以在间隔变量序列上强制这些关系。
+
+
+------>Step 8: Create the sequence variables
+
+workers = {w : mdl2.sequence_var(
+[ itvs[(h,t)] for h in Houses for t in TaskNames if Worker[t]==w ], 
+types=[h for h in Houses for t in TaskNames if Worker[t]==w ], name="workers_"+w)   
+           for w in WorkerNames}
+
+
+------>Step 9: Add the no overlap constraint
+#添加无重叠约束
+现在已经创建了序列变量，必须约束每个序列，以使间隔变量在解决方案中不重叠，考虑过渡时间，并且序列表示间隔变量在时间上的关系。
+
+约束no_overlap允许约束间隔序列变量以定义解决方案中存在的一串不重叠的间隔。 如果指定了一组过渡元组，则它定义了链中两个间隔之间必须经过的最短时间。 请注意，解决方案中不存在的间隔会自动从序列中删除。 为每个工作人员的序列间隔变量创建一个无重叠约束。
+for w in WorkerNames:
+    mdl2.add( mdl2.no_overlap(workers[w], transitionTimes) )
+
+建造房屋的成本是拖欠成本与建造房屋开始到完成所需的天数之和。 为了对与在其首选的最新结束日期之后完成的任务相关的成本进行建模，可以使用表达式endOf（）确定房屋间隔变量的结束日期。 为了模拟建造房屋所需时间的成本，可以使用lengthOf（）表达式，该表达式返回一个表示间隔变量长度的表达式。
+
+------>Step 10: Add the objective
+# create the obj and add it.
+mdl2.add( 
+    mdl2.minimize( 
+        mdl2.sum(Weight[h] * mdl2.max([0, mdl2.end_of(houses[h])-DueDate[h]]) + mdl2.length_of(houses[h]) for h in Houses) 
+    ) 
+)
+
+------>Step 11: Solve the model
+ Solve the model
+print("\nSolving model....")
+msol2 = mdl2.solve(FailLimit=30000)
+print("done")
+
+
+if msol2:
+    print("Cost will be " + str(msol2.get_objective_values()[0]))
+else:
+    print("No solution found")
+
+
+
+# Viewing the results of sequencing problems in a Gantt chart
+# (double click on the gantt to see details)
+import docplex.cp.utils_visu as visu
+import matplotlib.pyplot as plt
+%matplotlib inline
+#Change the plot size
+from pylab import rcParams
+rcParams['figure.figsize'] = 15, 3
+
+def showsequence(msol, s, setup, tp):
+    seq = msol.get_var_solution(s)
+    visu.sequence(name=s.get_name())
+    vs = seq.get_value()
+    for v in vs:
+        nm = v.get_name()
+        visu.interval(v, tp[TaskNames_ids[nm]], nm)
+    for i in range(len(vs) - 1):
+        end = vs[i].get_end()
+        tp1 = tp[TaskNames_ids[vs[i].get_name()]]
+        tp2 = tp[TaskNames_ids[vs[i + 1].get_name()]]
+        visu.transition(end, end + setup.get_value(tp1, tp2))
+if msol2:
+    visu.timeline("Solution for SchedSetup")
+    for w in WorkerNames:
+        types=[h for h in Houses for t in TaskNames if Worker[t]==w]
+        showsequence(msol2, workers[w], transitionTimes, types)
+    visu.show()
+

@@ -1,0 +1,17 @@
+https://mp.weixin.qq.com/s?__biz=MzU0NzgyMjgwNg==&mid=2247484670&idx=1&sn=c106f9fd792939d3d390f2f2afa2f933&chksm=fb49c947cc3e40517a4b383d2b962ad84247419140c962182a60aac27e674002d272964edeee&scene=21#wechat_redirect
+
+最大流问题(maximum flow problem)是一种组合优化问题，即讨论如何充分利用装置的能力，使得运输的流量最大以取得最好的效果的问题
+
+假设需要把一些物品从结点s运送到终点t，可以从其他结点中转
+各条有向边的权  表示最多能有多少个物品从这条边的起点运送到终点
+
+求解从源点可到达汇点的流量最大的问题称为最大流问题
+对于一条边(u,v)，它的物品上限称为容量(capacity)
+记为c(u,v)
+
+
+数学模型
+
+流平衡约束
+
+\sum_{v \in E} f(u,v) = \sum_{v \in E} f(v,u)   ,\forall u

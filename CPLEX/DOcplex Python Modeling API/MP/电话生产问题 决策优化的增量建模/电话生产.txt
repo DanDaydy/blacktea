@@ -1,0 +1,253 @@
+Describe the business problem Telephone production
+
+
+这里举了一个简单的例子，生产问题
+
+是一个非常简单的线性规划模型
+
+这里主要还是为了介绍往目标函数，约束条件里添加新的值的方法
+
+以及如果模型没有可行解，怎么样去放松约束
+
+
+========================================================
+
+
+
+
+电话生产问题的可能描述模型如下：
+
+决策变量：
+         生产的台式电话数量（DeskProduction）
+         生产的手机数量（CellProduction）
+
+目标：最大化利润
+
+限制条件：
+         DeskProduction应大于或等于100。
+         CellProduction应该大于或等于100。
+         DeskProduction的组装时间加上CellProduction的组装时间不应超过400小时。
+         DeskProduction的涂装时间加上CellProduction的涂装时间不应超过490小时。
+
+
+这是一种离散优化问题，可以通过使用整数规划（IP）或Constraint Programming（CP）来解决。
+
+Integer Programming is the class of problems defined as the optimization of a linear function, subject to linear constraints over integer variables.
+
+Constraint Programming problems generally have discrete decision variables, but the constraints can be logical, and the arithmetic expressions are not restricted to being linear.
+
+
+出于本教程的目的，我们将说明使用mathematical programming (MP)的解决方案。
+
+
+Use decision optimization
+
+
+----->Step 1: Import the library
+import sys
+try:
+    import docplex.mp
+except:
+    raise Exception('Please install docplex. See https://pypi.org/project/docplex/')
+
+
+----->Step 2: Set up the prescriptive model
+编写数学模型
+
+将描述性模型转换为数学模型：
+
+     使用两个决策变量DeskProduction和CellProduction
+     使用问题描述中给出的数据（切记在适当的时候将分钟转换为小时）
+     将目标写成数学表达式
+     将约束条件写为数学表达式（使用“ =”，“ <=”或“> =”，并命名约束条件以描述其目的）
+     定义决策变量的域
+
+
+Telephone production: a mathematical model
+
+为了表示最后两个约束，我们将装配时间和喷涂时间建模为两个产品的线性组合，从而得到以下数学模型：
+
+maximize:  12 desk_production+20 cell_production
+
+subject to:
+desk_production>=100
+cell_production>=100
+0.2 desk_production+0.4 cell_production<=400
+0.5 desk_production+0.4 cell_production<=490 </code>
+
+
+# first import the Model class from docplex.mp
+from docplex.mp.model import Model
+
+# create one model instance, with a name
+m = Model(name='telephone_production')
+
+
+#定义决策变量
+#台式的生产数量和手机的生产数量
+# by default, all variables in Docplex have a lower bound of 0 and infinite upper bound
+desk = m.integer_var(name='desk')
+cell   = m.integer_var(name='cell')
+
+#目标函数
+m.maximize(12 * desk + 20 * cell)
+
+
+# 约束条件
+# constraint #1: desk production is greater than 100
+m.add_constraint(desk >= 100, "desk")
+
+# constraint #2: cell production is greater than 100
+m.add_constraint(cell >= 100, "cell")
+
+# constraint #3: assembly time limit
+ct_assembly = m.add_constraint( 0.2 * desk + 0.4 * cell <= 400, "assembly_limit")
+
+# constraint #4: paiting time limit
+ct_painting = m.add_constraint( 0.5 * desk + 0.4 * cell <= 490, "painting_limit")
+
+
+
+Solve with Decision Optimization
+
+m.print_information()
+msol = m.solve()
+
+assert msol is not None, "model can't solve"
+m.print_solution()
+
+
+----->Step 3: Modify the model
+修改约束和变量范围
+
+模型对象提供了获取程序，以按名称检索变量和约束：
+
+     get_var_by_name
+     get_constraint_by_name变量和约束对象都提供用于访问右侧（rhs）和左侧（lhs）的属性。 当您修改变量的rhs或lhs时，您当然需要给出一个数字。 修改约束的rhs或lhs时，可以基于变量给出数字或表达式。
+
+假设我们最多生产2000个cells和1000个desks
+假设我们要将两者的产量从100增加到350
+
+
+# Access by name
+m.get_var_by_name("desk").ub = 2000
+# acess via the object
+cell.ub = 1000
+
+m.get_constraint_by_name("desk").rhs = 350
+m.get_constraint_by_name("cell").rhs = 350
+
+
+msol = m.solve()
+assert msol is not None, "model can't solve"
+m.print_solution()
+
+生产计划已根据我们的小改动进行了更新。
+
+
+
+Modify expressions
+
+现在，我们要介绍一种新型产品：“混合”电话。
+
+hybrid = m.integer_var(name='hybrid')
+
+我们要：
+     在目标中介绍
+     在现有的绘画和装配时间限制中引入它
+     为其生产增加新的约束，以至少生产350个。
+
+m.add_constraint(hybrid >= 350)
+;
+
+
+The objective will move from
+maximize:  12 desk_production+20 cell_production
+to
+maximize:  12 desk_production+20 cell_production + 10 hybrid_prodction
+m.get_objective_expr().add_term(hybrid, 10)
+;
+
+
+
+当您向模型添加约束时，其对象将通过add_constraint方法返回给您。 如果没有它，可以通过它的名称访问它
+m.get_constraint_by_name("assembly_limit").lhs.add_term(hybrid, 0.2)
+ct_painting.lhs.add_term(hybrid, 0.2)
+;
+
+
+msol = m.solve()
+assert msol is not None, "model can't solve"
+m.print_solution()
+
+
+现在说我们改进了绘画过程，绘画极限中系数的分布不再是[0.5，0.4，0.2]，而是[0.1，0.1，0.1]当您将手放在一个表达式上时，您可以修改该系数 通过set_coefficient逐个变量或通过set_coefficients的（variable，coeff）列表进行变量
+
+
+ct_painting.lhs.set_coefficients([(desk, 0.1), (cell, 0.1), (hybrid, 0.1)])
+
+msol = m.solve()
+assert msol is not None, "model can't solve"
+m.print_solution()
+
+
+Relaxations
+现在让我们引入一个新的约束：优化时间限制。
+
+# constraint: polishing time limit
+ct_polishing = m.add_constraint( 0.6 * desk + 0.6 * cell + 0.3 * hybrid <= 290, "polishing_limit")
+
+msol = m.solve()
+if msol is None:
+    print("model can't solve")
+该模型现在不可行。 我们需要处理它并挖掘不可行的地方。
+
+
+现在，您可以使用Relaxer对象。 您可以控制放松约束的方式，也可以使用各种自动模式中的一种：
+
+     'all'使用MEDIUM优先级放宽所有约束； 这是默认值。
+     “命名”使用用户名放宽所有限制，但不放宽其他限制。
+     'match'在约束名称中寻找优先级名称； 未命名的约束没有放松。
+
+
+我们将使用“匹配”模式。 抛光限制是强制性的。 绘画约束很不错。 装配约束的优先级较低。
+
+
+
+ct_polishing.name = "high_"+ct_polishing.name
+ct_assembly.name = "low_"+ct_assembly.name
+ct_painting.name = "medium_"+ct_painting.name
+
+
+
+
+# if a name contains "low", it has priority LOW
+# if a ct name contains "medium" it has priority MEDIUM
+# same for HIGH
+# if a constraint has no name or does not match any, it is not relaxable.
+from docplex.mp.relaxer import Relaxer
+relaxer = Relaxer(prioritizer='match', verbose=True)
+
+relaxed_sol = relaxer.relax(m)
+relaxed_ok = relaxed_sol is not None
+assert relaxed_ok, "relaxation failed"
+relaxer.print_information()
+
+
+
+
+m.print_solution()
+
+
+
+
+
+ct_polishing_relax = relaxer.get_relaxation(ct_polishing)
+print("* found slack of {0} for polish ct".format(ct_polishing_relax))
+ct_polishing.rhs+= ct_polishing_relax
+m.solve()
+m.report()
+m.print_solution()
+
+
+
